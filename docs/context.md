@@ -7,14 +7,22 @@ The `context` tool extracts relevant code and context from your codebase to send
 ## Usage
 
 ```bash
+# Using patterns
 ./context --files="src/components/*.js" --exclude="*.test.js" --max-size=300KB --format=md > context.txt
+
+# Using direct file paths
+./context src/app.js src/utils.js README.md > context.txt
+
+# Including a prompt template
+./context --prompt=prompts/context_prompt.txt app.js > context.txt
 ```
 
 ## Arguments
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--files=<pattern>` | File pattern to include (e.g., "src/*.js") | Required |
+| `--files=<pattern>` | File pattern to include (e.g., "src/*.js") | None |
+| Direct file arguments | Files or directories to include (e.g., app.js README.md) | None |
 | `--exclude=<pattern>` | File pattern to exclude (e.g., "node_modules/**") | None |
 | `--max-size=<size>` | Maximum context size in KB/MB (e.g., "500KB") | "500KB" |
 | `--include-deps` | Include dependent files based on imports/requires | False |
@@ -25,6 +33,7 @@ The `context` tool extracts relevant code and context from your codebase to send
 | `--summary` | Include short summary of each file | False |
 | `--show-file-sizes` | Include file sizes in output | False |
 | `--truncate-large=<size>` | Truncate files larger than specified size (e.g., "50KB") | None |
+| `--prompt=<file>` | Include prompt template from specified file | None |
 
 ## Examples
 

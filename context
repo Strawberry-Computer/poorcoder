@@ -4,7 +4,7 @@
 # Generates contextual information from a codebase to send to an LLM
 
 # Default values
-FILES=""
+FILES=()
 EXCLUDE=""
 MAX_SIZE="500KB"
 INCLUDE_DEPS=false
@@ -15,11 +15,13 @@ FORMAT="md"
 SUMMARY=false
 SHOW_FILE_SIZES=false
 TRUNCATE_LARGE=""
+PROMPT_FILE=""
+VERBOSE=false
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --files=*) FILES="${1#*=}"; shift ;;
+        --files=*) FILES+=("${1#*=}"); shift ;;
         --exclude=*) EXCLUDE="${1#*=}"; shift ;;
         --max-size=*) MAX_SIZE="${1#*=}"; shift ;;
         --include-deps) INCLUDE_DEPS=true; shift ;;
@@ -30,8 +32,10 @@ while [[ "$#" -gt 0 ]]; do
         --summary) SUMMARY=true; shift ;;
         --show-file-sizes) SHOW_FILE_SIZES=true; shift ;;
         --truncate-large=*) TRUNCATE_LARGE="${1#*=}"; shift ;;
+        --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
+        --verbose) VERBOSE=true; shift ;;
         --help|-h)
-            echo "Usage: ./context [options]"
+            echo "Usage: ./context [options] [file1 file2 ...]"
             echo ""
             echo "Options:"
             echo "  --files=<pattern>        File pattern to include (e.g., \"src/*.js\")"
@@ -45,18 +49,15 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --summary                Include short summary of each file"
             echo "  --show-file-sizes        Include file sizes in output"
             echo "  --truncate-large=<size>  Truncate files larger than specified size (e.g., \"50KB\")"
+            echo "  --prompt=<file>          Include prompt template from specified file"
+            echo "  --verbose                Show verbose output"
             echo "  --help, -h               Show this help message"
             exit 0
             ;;
-        *) echo "Unknown parameter: $1"; exit 1 ;;
+        --*) echo "Unknown parameter: $1"; exit 1 ;;
+        *) FILES+=("$1"); shift ;;
     esac
 done
-
-# Validate required parameters
-if [ -z "$FILES" ]; then
-    echo "Error: --files parameter is required"
-    exit 1
-fi
 
 # Convert human-readable size to bytes
 convert_to_bytes() {
@@ -80,23 +81,56 @@ fi
 
 # Get all matching files
 find_files() {
-    local find_cmd="find . -type f -path \"$FILES\""
-    if [ -n "$EXCLUDE" ]; then
-        find_cmd="$find_cmd -not -path \"$EXCLUDE\""
-    fi
-    eval $find_cmd | sort
+    local all_files=""
+    
+    # Process each file or pattern
+    for file_pattern in "${FILES[@]}"; do
+        # Check if it's a direct file path
+        if [ -f "$file_pattern" ]; then
+            all_files="$all_files"$'\n'"$file_pattern"
+        else
+            # It's a pattern, use find
+            local find_cmd="find . -type f -path \"$file_pattern\""
+            if [ -n "$EXCLUDE" ]; then
+                find_cmd="$find_cmd -not -path \"$EXCLUDE\""
+            fi
+            local found_files=$(eval $find_cmd)
+            if [ -n "$found_files" ]; then
+                all_files="$all_files"$'\n'"$found_files"
+            fi
+        fi
+    done
+    
+    # Remove empty lines and sort
+    echo "$all_files" | grep -v "^$" | sort | uniq
 }
+
+# Handle empty file list
+if [ ${#FILES[@]} -eq 0 ]; then
+    echo "Error: No files specified. Use --files=<pattern> or provide filenames directly."
+    exit 1
+fi
 
 ALL_FILES=$(find_files)
 TOTAL_SIZE=0
 
-# Calculate current size
-for file in $ALL_FILES; do
-    if [ -f "$file" ]; then
-        file_size=$(wc -c < "$file")
-        TOTAL_SIZE=$((TOTAL_SIZE + file_size))
-    fi
-done
+# Human-readable size function
+human_readable_size() {
+    local size=$1
+    local units=("B" "KB" "MB" "GB" "TB")
+    local unit_index=0
+    local size_float=$size
+    
+    while [ $(echo "$size_float >= 1024" | bc -l) -eq 1 ] && [ $unit_index -lt 4 ]; do
+        size_float=$(echo "scale=2; $size_float / 1024" | bc -l)
+        unit_index=$((unit_index + 1))
+    done
+    
+    # Remove trailing zeros and decimal point if it's a whole number
+    size_float=$(echo $size_float | sed 's/\.0*$//')
+    
+    echo "$size_float ${units[$unit_index]}"
+}
 
 # Start the output based on format
 case $FORMAT in
@@ -117,63 +151,18 @@ case $FORMAT in
         ;;
 esac
 
-# Function to find dependencies in a file (basic implementation)
-find_dependencies() {
-    local file=$1
-    local ext=${file##*.}
-    
-    case $ext in
-        js|jsx|ts|tsx)
-            grep -E "^import .+ from ['\"]\..*['\"]|^const .+ = require[[:space:]]*\(['\"]\..*['\"]\)" "$file" | 
-            sed -E "s/^import .+ from ['\"](\..*)['\"];?/\1/g;s/^const .+ = require[[:space:]]*\(['\"](\..*)['\"].*\);?/\1/g" |
-            sed "s/'//g;s/\"//g"
-            ;;
-        py)
-            grep -E "^import .+|^from .+ import" "$file" | 
-            sed -E "s/^import (.+)/\1/g;s/^from (.+) import.*/\1/g" |
-            grep -v "^import" | grep -v "^from"
-            ;;
-        rb)
-            grep -E "^require ['\"]\." "$file" | 
-            sed -E "s/^require ['\"](.+)['\"].*/\1/g"
-            ;;
-        php)
-            grep -E "^require|^include|^require_once|^include_once" "$file" | 
-            sed -E "s/^(require|include|require_once|include_once) ['\"](.+)['\"].*/\2/g"
-            ;;
-    esac
-}
-
-# Function to resolve a dependency path relative to a file
-resolve_dependency() {
-    local base_file=$1
-    local dep=$2
-    local base_dir=$(dirname "$base_file")
-    
-    # Handle file extensions if not specified
-    if [[ ! "$dep" =~ \.[a-zA-Z0-9]+$ ]]; then
-        # Try to find the file with common extensions
-        for ext in js jsx ts tsx py rb php; do
-            if [ -f "$base_dir/$dep.$ext" ]; then
-                dep="$dep.$ext"
-                break
-            fi
-        done
-    fi
-    
-    # Normalize the path
-    local full_path="$base_dir/$dep"
-    realpath "$full_path" 2>/dev/null || echo "$full_path"
-}
-
 # Process each file
 file_count=0
 for file in $ALL_FILES; do
     if [ ! -f "$file" ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "Warning: File not found: $file" >&2
+        fi
         continue
     fi
     
     file_size=$(wc -c < "$file")
+    TOTAL_SIZE=$((TOTAL_SIZE + file_size))
     truncated=false
     file_content=""
     
@@ -197,7 +186,7 @@ for file in $ALL_FILES; do
             echo "### $file"
             if [ "$SHOW_FILE_SIZES" = true ]; then
                 echo ""
-                echo "Size: $(numfmt --to=iec-i --suffix=B $file_size)"
+                echo "Size: $(human_readable_size $file_size)"
                 echo ""
             fi
             
@@ -242,7 +231,7 @@ for file in $ALL_FILES; do
         text)
             echo "=== $file ==="
             if [ "$SHOW_FILE_SIZES" = true ]; then
-                echo "Size: $(numfmt --to=iec-i --suffix=B $file_size)"
+                echo "Size: $(human_readable_size $file_size)"
             fi
             
             if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
@@ -262,15 +251,11 @@ for file in $ALL_FILES; do
     
     file_count=$((file_count + 1))
     
-    # Process dependencies if requested
+    # Note: Dependency resolution disabled for now
     if [ "$INCLUDE_DEPS" = true ] && [ $DEPTH -gt 0 ]; then
-        deps=$(find_dependencies "$file")
-        for dep in $deps; do
-            resolved_dep=$(resolve_dependency "$file" "$dep")
-            if [ -f "$resolved_dep" ] && ! echo "$ALL_FILES" | grep -q "$resolved_dep"; then
-                ALL_FILES="$ALL_FILES"$'\n'"$resolved_dep"
-            fi
-        done
+        if [ "$VERBOSE" = true ]; then
+            echo "Note: Dependency resolution is currently disabled" >&2
+        fi
     fi
 done
 
@@ -295,8 +280,9 @@ if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse 
             echo "  ,"
             echo "  \"git\": {"
             echo "    \"commits\": ["
+            commit_count=0
             git log -n $GIT_DEPTH --pretty=format:"%h|%s|%an|%ar" | while IFS="|" read -r hash message author date; do
-                if [ "$hash" != "$(git log -n $GIT_DEPTH --pretty=format:"%h" | head -n1)" ]; then
+                if [ $commit_count -gt 0 ]; then
                     echo "    ,"
                 fi
                 echo "      {"
@@ -305,6 +291,7 @@ if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse 
                 echo "        \"author\": \"$(echo "$author" | sed 's/"/\\"/g')\","
                 echo "        \"date\": \"$date\""
                 echo -n "      }"
+                commit_count=$((commit_count + 1))
             done
             echo ""
             echo "    ],"
@@ -331,31 +318,53 @@ fi
 if [ "$FORMAT" = "json" ]; then
     echo ""
     echo "  ]"
+    
+    # Include prompt if specified
+    if [ -n "$PROMPT_FILE" ] && [ -f "$PROMPT_FILE" ]; then
+        prompt_content=$(cat "$PROMPT_FILE" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+        echo "  ,"
+        echo "  \"prompt\": \"$prompt_content\""
+    fi
+    
     echo "}"
+else
+    # Add context generation footer
+    case $FORMAT in
+        md)
+            echo "## Context Information"
+            echo ""
+            echo "Generated on: $(date)"
+            echo "Total files: $file_count"
+            echo "Total size: $(human_readable_size $TOTAL_SIZE)"
+            echo ""
+            
+            # Include prompt template if specified
+            if [ -n "$PROMPT_FILE" ] && [ -f "$PROMPT_FILE" ]; then
+                echo "## Instructions for LLM"
+                echo ""
+                cat "$PROMPT_FILE"
+                echo ""
+            fi
+            ;;
+        text)
+            echo "CONTEXT INFORMATION"
+            echo "------------------"
+            echo ""
+            echo "Generated on: $(date)"
+            echo "Total files: $file_count" 
+            echo "Total size: $(human_readable_size $TOTAL_SIZE)"
+            echo ""
+            
+            # Include prompt template if specified
+            if [ -n "$PROMPT_FILE" ] && [ -f "$PROMPT_FILE" ]; then
+                echo "INSTRUCTIONS FOR LLM"
+                echo "-------------------"
+                echo ""
+                cat "$PROMPT_FILE"
+                echo ""
+            fi
+            ;;
+    esac
 fi
-
-# Add context generation footer
-case $FORMAT in
-    md)
-        echo "## Context Information"
-        echo ""
-        echo "Generated on: $(date)"
-        echo "Total files: $file_count"
-        echo "Total size: $(numfmt --to=iec-i --suffix=B $TOTAL_SIZE)"
-        echo ""
-        ;;
-    json)
-        # Already closed
-        ;;
-    text)
-        echo "CONTEXT INFORMATION"
-        echo "------------------"
-        echo ""
-        echo "Generated on: $(date)"
-        echo "Total files: $file_count"
-        echo "Total size: $(numfmt --to=iec-i --suffix=B $TOTAL_SIZE)"
-        echo ""
-        ;;
-esac
 
 exit 0
