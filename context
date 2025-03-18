@@ -17,6 +17,8 @@ SHOW_FILE_SIZES=false
 TRUNCATE_LARGE=""
 PROMPT_FILE=""
 VERBOSE=false
+INCLUDE_LS_FILES=true
+LS_FILES_LIMIT=100
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
@@ -34,6 +36,9 @@ while [[ "$#" -gt 0 ]]; do
         --truncate-large=*) TRUNCATE_LARGE="${1#*=}"; shift ;;
         --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
         --verbose) VERBOSE=true; shift ;;
+        --ls-files) INCLUDE_LS_FILES=true; shift ;;
+        --no-ls-files) INCLUDE_LS_FILES=false; shift ;;
+        --ls-files-limit=*) LS_FILES_LIMIT="${1#*=}"; shift ;;
         --help|-h)
             echo "Usage: ./context [options] [file1 file2 ...]"
             echo ""
@@ -51,6 +56,9 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --truncate-large=<size>  Truncate files larger than specified size (e.g., \"50KB\")"
             echo "  --prompt=<file>          Include prompt template from specified file"
             echo "  --verbose                Show verbose output"
+            echo "  --ls-files               Include git ls-files output (default: true)"
+            echo "  --no-ls-files            Don't include git ls-files output"
+            echo "  --ls-files-limit=<num>   Limit the number of files shown in ls-files (default: 100)"
             echo "  --help, -h               Show this help message"
             exit 0
             ;;
@@ -309,6 +317,70 @@ if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse 
             echo ""
             echo "Branch Information:"
             echo "Current branch: $(git branch --show-current)"
+            echo ""
+            ;;
+    esac
+fi
+
+# Include git ls-files output if requested and we're in a git repo
+if [ "$INCLUDE_LS_FILES" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # Get the list of files tracked by git
+    GIT_FILES=$(git ls-files | sort)
+    GIT_FILES_COUNT=$(echo "$GIT_FILES" | wc -l)
+    
+    # Apply limit if needed
+    if [ $GIT_FILES_COUNT -gt $LS_FILES_LIMIT ]; then
+        GIT_FILES=$(echo "$GIT_FILES" | head -n $LS_FILES_LIMIT)
+        GIT_FILES_TRUNCATED=true
+    else
+        GIT_FILES_TRUNCATED=false
+    fi
+    
+    case $FORMAT in
+        md)
+            echo "## Repository Files"
+            echo ""
+            echo "$GIT_FILES" | while read -r file; do
+                echo "- $file"
+            done
+            if [ "$GIT_FILES_TRUNCATED" = true ]; then
+                echo "- ... (and $(($GIT_FILES_COUNT - $LS_FILES_LIMIT)) more files)"
+            fi
+            echo ""
+            echo "Total files in repository: $GIT_FILES_COUNT"
+            echo ""
+            ;;
+        json)
+            echo "  ,"
+            echo "  \"repository_files\": {"
+            echo "    \"count\": $GIT_FILES_COUNT,"
+            echo "    \"truncated\": $GIT_FILES_TRUNCATED,"
+            echo "    \"files\": ["
+            first=true
+            echo "$GIT_FILES" | while read -r file; do
+                if [ "$first" = true ]; then
+                    first=false
+                else
+                    echo ","
+                fi
+                echo -n "      \"$file\""
+            done
+            echo ""
+            echo "    ]"
+            echo "  }"
+            ;;
+        text)
+            echo "REPOSITORY FILES"
+            echo "---------------"
+            echo ""
+            echo "$GIT_FILES" | while read -r file; do
+                echo "* $file"
+            done
+            if [ "$GIT_FILES_TRUNCATED" = true ]; then
+                echo "* ... (and $(($GIT_FILES_COUNT - $LS_FILES_LIMIT)) more files)"
+            fi
+            echo ""
+            echo "Total files in repository: $GIT_FILES_COUNT"
             echo ""
             ;;
     esac

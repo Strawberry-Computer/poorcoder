@@ -34,6 +34,9 @@ The `context` tool extracts relevant code and context from your codebase to send
 | `--show-file-sizes` | Include file sizes in output | False |
 | `--truncate-large=<size>` | Truncate files larger than specified size (e.g., "50KB") | None |
 | `--prompt=<file>` | Include prompt template from specified file | None |
+| `--ls-files` | Include git ls-files output | True |
+| `--no-ls-files` | Don't include git ls-files output | False |
+| `--ls-files-limit=<num>` | Limit the number of files shown in ls-files | 100 |
 
 ## Examples
 
