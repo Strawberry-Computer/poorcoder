@@ -1,0 +1,361 @@
+#!/bin/bash
+
+# context - Code Context Generator
+# Generates contextual information from a codebase to send to an LLM
+
+# Default values
+FILES=""
+EXCLUDE=""
+MAX_SIZE="500KB"
+INCLUDE_DEPS=false
+DEPTH=1
+INCLUDE_GIT=false
+GIT_DEPTH=3
+FORMAT="md"
+SUMMARY=false
+SHOW_FILE_SIZES=false
+TRUNCATE_LARGE=""
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --files=*) FILES="${1#*=}"; shift ;;
+        --exclude=*) EXCLUDE="${1#*=}"; shift ;;
+        --max-size=*) MAX_SIZE="${1#*=}"; shift ;;
+        --include-deps) INCLUDE_DEPS=true; shift ;;
+        --depth=*) DEPTH="${1#*=}"; shift ;;
+        --include-git) INCLUDE_GIT=true; shift ;;
+        --git-depth=*) GIT_DEPTH="${1#*=}"; shift ;;
+        --format=*) FORMAT="${1#*=}"; shift ;;
+        --summary) SUMMARY=true; shift ;;
+        --show-file-sizes) SHOW_FILE_SIZES=true; shift ;;
+        --truncate-large=*) TRUNCATE_LARGE="${1#*=}"; shift ;;
+        --help|-h)
+            echo "Usage: ./context [options]"
+            echo ""
+            echo "Options:"
+            echo "  --files=<pattern>        File pattern to include (e.g., \"src/*.js\")"
+            echo "  --exclude=<pattern>      File pattern to exclude (e.g., \"node_modules/**\")"
+            echo "  --max-size=<size>        Maximum context size in KB/MB (e.g., \"500KB\")"
+            echo "  --include-deps           Include dependent files based on imports/requires"
+            echo "  --depth=<num>            Dependency traversal depth (default: 1)"
+            echo "  --include-git            Include git information (recent commits, authors)"
+            echo "  --git-depth=<num>        Number of recent commits to include (default: 3)"
+            echo "  --format=<format>        Output format (md, json, text) (default: md)"
+            echo "  --summary                Include short summary of each file"
+            echo "  --show-file-sizes        Include file sizes in output"
+            echo "  --truncate-large=<size>  Truncate files larger than specified size (e.g., \"50KB\")"
+            echo "  --help, -h               Show this help message"
+            exit 0
+            ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+done
+
+# Validate required parameters
+if [ -z "$FILES" ]; then
+    echo "Error: --files parameter is required"
+    exit 1
+fi
+
+# Convert human-readable size to bytes
+convert_to_bytes() {
+    local size=$1
+    local num=${size%[KMG]*}
+    local unit=${size#$num}
+    
+    case $unit in
+        KB|K) echo $((num * 1024)) ;;
+        MB|M) echo $((num * 1024 * 1024)) ;;
+        GB|G) echo $((num * 1024 * 1024 * 1024)) ;;
+        *) echo $num ;;
+    esac
+}
+
+MAX_SIZE_BYTES=$(convert_to_bytes "$MAX_SIZE")
+TRUNCATE_SIZE_BYTES=0
+if [ -n "$TRUNCATE_LARGE" ]; then
+    TRUNCATE_SIZE_BYTES=$(convert_to_bytes "$TRUNCATE_LARGE")
+fi
+
+# Get all matching files
+find_files() {
+    local find_cmd="find . -type f -path \"$FILES\""
+    if [ -n "$EXCLUDE" ]; then
+        find_cmd="$find_cmd -not -path \"$EXCLUDE\""
+    fi
+    eval $find_cmd | sort
+}
+
+ALL_FILES=$(find_files)
+TOTAL_SIZE=0
+
+# Calculate current size
+for file in $ALL_FILES; do
+    if [ -f "$file" ]; then
+        file_size=$(wc -c < "$file")
+        TOTAL_SIZE=$((TOTAL_SIZE + file_size))
+    fi
+done
+
+# Start the output based on format
+case $FORMAT in
+    md)
+        echo "# Code Context"
+        echo ""
+        echo "## Files"
+        echo ""
+        ;;
+    json)
+        echo "{"
+        echo "  \"files\": ["
+        ;;
+    text)
+        echo "CODE CONTEXT"
+        echo "============"
+        echo ""
+        ;;
+esac
+
+# Function to find dependencies in a file (basic implementation)
+find_dependencies() {
+    local file=$1
+    local ext=${file##*.}
+    
+    case $ext in
+        js|jsx|ts|tsx)
+            grep -E "^import .+ from ['\"]\..*['\"]|^const .+ = require[[:space:]]*\(['\"]\..*['\"]\)" "$file" | 
+            sed -E "s/^import .+ from ['\"](\..*)['\"];?/\1/g;s/^const .+ = require[[:space:]]*\(['\"](\..*)['\"].*\);?/\1/g" |
+            sed "s/'//g;s/\"//g"
+            ;;
+        py)
+            grep -E "^import .+|^from .+ import" "$file" | 
+            sed -E "s/^import (.+)/\1/g;s/^from (.+) import.*/\1/g" |
+            grep -v "^import" | grep -v "^from"
+            ;;
+        rb)
+            grep -E "^require ['\"]\." "$file" | 
+            sed -E "s/^require ['\"](.+)['\"].*/\1/g"
+            ;;
+        php)
+            grep -E "^require|^include|^require_once|^include_once" "$file" | 
+            sed -E "s/^(require|include|require_once|include_once) ['\"](.+)['\"].*/\2/g"
+            ;;
+    esac
+}
+
+# Function to resolve a dependency path relative to a file
+resolve_dependency() {
+    local base_file=$1
+    local dep=$2
+    local base_dir=$(dirname "$base_file")
+    
+    # Handle file extensions if not specified
+    if [[ ! "$dep" =~ \.[a-zA-Z0-9]+$ ]]; then
+        # Try to find the file with common extensions
+        for ext in js jsx ts tsx py rb php; do
+            if [ -f "$base_dir/$dep.$ext" ]; then
+                dep="$dep.$ext"
+                break
+            fi
+        done
+    fi
+    
+    # Normalize the path
+    local full_path="$base_dir/$dep"
+    realpath "$full_path" 2>/dev/null || echo "$full_path"
+}
+
+# Process each file
+file_count=0
+for file in $ALL_FILES; do
+    if [ ! -f "$file" ]; then
+        continue
+    fi
+    
+    file_size=$(wc -c < "$file")
+    truncated=false
+    file_content=""
+    
+    # Check if we need to truncate the file
+    if [ $TRUNCATE_SIZE_BYTES -gt 0 ] && [ $file_size -gt $TRUNCATE_SIZE_BYTES ]; then
+        file_content=$(head -c $TRUNCATE_SIZE_BYTES "$file")
+        truncated=true
+    else
+        file_content=$(cat "$file")
+    fi
+    
+    # Get file summary if needed
+    file_summary=""
+    if [ "$SUMMARY" = true ]; then
+        file_summary=$(head -n 20 "$file" | grep -E "^(//|#|/*) " | head -n 5 | sed 's/^[\/\#\* ]*//')
+    fi
+    
+    # Format the output based on chosen format
+    case $FORMAT in
+        md)
+            echo "### $file"
+            if [ "$SHOW_FILE_SIZES" = true ]; then
+                echo ""
+                echo "Size: $(numfmt --to=iec-i --suffix=B $file_size)"
+                echo ""
+            fi
+            
+            if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
+                echo ""
+                echo "Summary:"
+                echo "$file_summary"
+                echo ""
+            fi
+            
+            echo ""
+            echo '```'${file##*.}
+            echo "$file_content"
+            if [ "$truncated" = true ]; then
+                echo ""
+                echo "... [File truncated due to size limit] ..."
+            fi
+            echo '```'
+            echo ""
+            ;;
+        json)
+            # Escape special characters for JSON
+            file_content_json=$(echo "$file_content" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+            if [ $file_count -gt 0 ]; then
+                echo "  ,"
+            fi
+            echo "    {"
+            echo "      \"path\": \"$file\","
+            if [ "$SHOW_FILE_SIZES" = true ]; then
+                echo "      \"size\": $file_size,"
+            fi
+            if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
+                file_summary_json=$(echo "$file_summary" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+                echo "      \"summary\": \"$file_summary_json\","
+            fi
+            echo "      \"content\": \"$file_content_json\""
+            if [ "$truncated" = true ]; then
+                echo "      \"truncated\": true"
+            fi
+            echo -n "    }"
+            ;;
+        text)
+            echo "=== $file ==="
+            if [ "$SHOW_FILE_SIZES" = true ]; then
+                echo "Size: $(numfmt --to=iec-i --suffix=B $file_size)"
+            fi
+            
+            if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
+                echo "Summary:"
+                echo "$file_summary"
+            fi
+            
+            echo "-----"
+            echo "$file_content"
+            if [ "$truncated" = true ]; then
+                echo "... [File truncated due to size limit] ..."
+            fi
+            echo "-----"
+            echo ""
+            ;;
+    esac
+    
+    file_count=$((file_count + 1))
+    
+    # Process dependencies if requested
+    if [ "$INCLUDE_DEPS" = true ] && [ $DEPTH -gt 0 ]; then
+        deps=$(find_dependencies "$file")
+        for dep in $deps; do
+            resolved_dep=$(resolve_dependency "$file" "$dep")
+            if [ -f "$resolved_dep" ] && ! echo "$ALL_FILES" | grep -q "$resolved_dep"; then
+                ALL_FILES="$ALL_FILES"$'\n'"$resolved_dep"
+            fi
+        done
+    fi
+done
+
+# Include git information if requested
+if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    case $FORMAT in
+        md)
+            echo "## Git Information"
+            echo ""
+            echo "### Recent Commits"
+            echo ""
+            git log -n $GIT_DEPTH --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
+                echo "$line"
+            done
+            echo ""
+            echo "### Branch Information"
+            echo ""
+            echo "Current branch: $(git branch --show-current)"
+            echo ""
+            ;;
+        json)
+            echo "  ,"
+            echo "  \"git\": {"
+            echo "    \"commits\": ["
+            git log -n $GIT_DEPTH --pretty=format:"%h|%s|%an|%ar" | while IFS="|" read -r hash message author date; do
+                if [ "$hash" != "$(git log -n $GIT_DEPTH --pretty=format:"%h" | head -n1)" ]; then
+                    echo "    ,"
+                fi
+                echo "      {"
+                echo "        \"hash\": \"$hash\","
+                echo "        \"message\": \"$(echo "$message" | sed 's/"/\\"/g')\","
+                echo "        \"author\": \"$(echo "$author" | sed 's/"/\\"/g')\","
+                echo "        \"date\": \"$date\""
+                echo -n "      }"
+            done
+            echo ""
+            echo "    ],"
+            echo "    \"branch\": \"$(git branch --show-current)\""
+            echo "  }"
+            ;;
+        text)
+            echo "GIT INFORMATION"
+            echo "------------"
+            echo ""
+            echo "Recent Commits:"
+            git log -n $GIT_DEPTH --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
+                echo "$line"
+            done
+            echo ""
+            echo "Branch Information:"
+            echo "Current branch: $(git branch --show-current)"
+            echo ""
+            ;;
+    esac
+fi
+
+# Close JSON if needed
+if [ "$FORMAT" = "json" ]; then
+    echo ""
+    echo "  ]"
+    echo "}"
+fi
+
+# Add context generation footer
+case $FORMAT in
+    md)
+        echo "## Context Information"
+        echo ""
+        echo "Generated on: $(date)"
+        echo "Total files: $file_count"
+        echo "Total size: $(numfmt --to=iec-i --suffix=B $TOTAL_SIZE)"
+        echo ""
+        ;;
+    json)
+        # Already closed
+        ;;
+    text)
+        echo "CONTEXT INFORMATION"
+        echo "------------------"
+        echo ""
+        echo "Generated on: $(date)"
+        echo "Total files: $file_count"
+        echo "Total size: $(numfmt --to=iec-i --suffix=B $TOTAL_SIZE)"
+        echo ""
+        ;;
+esac
+
+exit 0
