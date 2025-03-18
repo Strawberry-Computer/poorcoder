@@ -8,7 +8,7 @@ DRY_RUN=false
 CREATE_MISSING=false
 BACKUP=false
 BACKUP_DIR="./.backups"
-FILE_MARKER="```[a-z]+ (.+)"
+FILE_MARKER='^```[a-z]+ (.+)$'
 SKIP_UNCHANGED=false
 VERBOSE=false
 CONFIRM=false
@@ -36,7 +36,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --create-missing          Create files that don't exist"
             echo "  --backup                  Create backup files before applying changes"
             echo "  --backup-dir=<dir>        Directory for backups (default: ./.backups)"
-            echo "  --file-marker=<regex>     Regex to identify target files from markdown (default: \"```[a-z]+ (.+)\")"
+            echo "  --file-marker=<regex>     Regex to identify target files from markdown"
             echo "  --skip-unchanged          Skip files with no changes"
             echo "  --verbose                 Show detailed output about changes"
             echo "  --confirm                 Prompt for confirmation before applying each change"
