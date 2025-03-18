@@ -1,0 +1,11 @@
+Based on the changes above, please generate an appropriate git commit message.
+
+For better commit messages, consider:
+1. Keep the first line under 72 characters
+2. Use the imperative mood ("add" not "added")
+3. Describe what was changed and why
+4. Optional: Add more details after a blank line if needed
+
+Your commit message should describe what was changed and why.
+
+If the change is related to a specific issue or feature request, please mention it.

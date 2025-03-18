@@ -1,0 +1,24 @@
+Please use the conventional commit format:
+
+type(scope): description
+
+Where:
+- type: describes the kind of change
+  - feat: A new feature
+  - fix: A bug fix
+  - docs: Documentation changes
+  - style: Changes that don't affect the meaning of the code (formatting, etc)
+  - refactor: Code changes that neither fix a bug nor add a feature
+  - perf: Changes that improve performance
+  - test: Adding or correcting tests
+  - chore: Changes to the build process or auxiliary tools
+- scope: (optional) what part of the codebase is affected (e.g., component name)
+- description: a short description of the change in present tense, imperative mood
+
+Examples:
+- feat(auth): add JWT authentication support
+- fix(button): correct event propagation in onClick handler
+- docs(readme): update installation instructions
+
+For more complex changes, you can add a blank line after the first line, 
+followed by a more detailed description.
