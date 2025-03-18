@@ -88,8 +88,8 @@ esac
 
 # Include project context if requested
 if [ "$PROJECT_CONTEXT" = true ]; then
-    local project_name=$(get_project_name)
-    local project_description=""
+    project_name=$(get_project_name)
+    project_description=""
     
     # Try to find project description
     if [ -f "package.json" ]; then
@@ -133,9 +133,9 @@ fi
 
 # Show branch information if requested
 if [ "$BRANCH_INFO" = true ]; then
-    local current_branch=$(git branch --show-current)
-    local upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "None")
-    local tracking_status=$(git status -sb | head -n 1)
+    current_branch=$(git branch --show-current)
+    upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "None")
+    tracking_status=$(git status -sb | head -n 1)
     
     case $FORMAT in
         md)
@@ -177,8 +177,8 @@ fi
 
 # Show git diff if requested
 if [ "$SHOW_DIFF" = true ]; then
-    local diff_cmd="git diff"
-    local diff_title="Current Changes (Diff)"
+    diff_cmd="git diff"
+    diff_title="Current Changes (Diff)"
     
     if [ "$STAGED_ONLY" = true ]; then
         diff_cmd="git diff --staged"
@@ -199,7 +199,7 @@ if [ "$SHOW_DIFF" = true ]; then
     fi
     
     # Get the diff
-    local diff_output=$(eval $diff_cmd)
+    diff_output=$(eval $diff_cmd)
     
     if [ -n "$diff_output" ]; then
         case $FORMAT in
@@ -215,7 +215,7 @@ if [ "$SHOW_DIFF" = true ]; then
                 echo "  \"diff\": {"
                 echo "    \"title\": \"$diff_title\","
                 # Escape special characters for JSON
-                local diff_json=$(echo "$diff_output" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+                diff_json=$(echo "$diff_output" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
                 echo "    \"content\": \"$diff_json\""
                 echo "  },"
                 ;;
@@ -232,7 +232,7 @@ if [ "$SHOW_DIFF" = true ]; then
 fi
 
 # Show summary of files changed
-local files_changed=$(git diff --name-status)
+files_changed=$(git diff --name-status)
 if [ "$STAGED_ONLY" = true ]; then
     files_changed=$(git diff --staged --name-status)
 fi
@@ -390,7 +390,7 @@ fi
 # Include commit message guidance if requested
 if [ "$INCLUDE_PROMPT" = true ]; then
     # Get the prompt content from the file or use a default
-    local prompt_content=""
+    prompt_content=""
     if [ -f "prompts/commit_prompt.txt" ]; then
         prompt_content=$(cat "prompts/commit_prompt.txt")
     else
@@ -412,7 +412,7 @@ if [ "$INCLUDE_PROMPT" = true ]; then
             echo ","
             echo "  \"commit_guidance\": {"
             # Escape special characters for JSON
-            local guidance_json=$(echo "$prompt_content" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
+            guidance_json=$(echo "$prompt_content" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
             echo "    \"content\": \"$guidance_json\""
             if [ "$CONVENTIONAL" = true ]; then
                 echo "    \"conventional\": true"
