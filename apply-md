@@ -76,42 +76,37 @@ trap cleanup EXIT
 extract_blocks() {
     local current_file=""
     local in_block=false
-    local block_content=""
+    local temp_file=""
     
     echo "$MARKDOWN" | while IFS= read -r line; do
         if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]+(.+) ]]; then
             current_file="${BASH_REMATCH[2]}"
             in_block=true
-            block_content=""
-            continue
-        fi
-        
-        if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]*$ ]]; then
-            in_block=false
-            current_file=""
+            temp_file="$TEMP_DIR/$current_file"
+            mkdir -p "$(dirname "$temp_file")"
+            : > "$temp_file"  # Create empty file
+            if [ "$VERBOSE" = true ]; then
+                echo "Starting code block for file: $current_file"
+            fi
             continue
         fi
         
         if [[ "$line" =~ ^[[:space:]]*\`\`\`[[:space:]]*$ ]]; then
             if [ -n "$current_file" ] && [ "$in_block" = true ]; then
                 echo "$current_file" >> "$FILES_FILE"
-                echo "$block_content" > "$TEMP_DIR/$current_file"
                 current_file_formatted=$(echo "$current_file" | sed 's/^\.\///')
                 if [ "$VERBOSE" = true ]; then
-                    echo "Found code block for file: $current_file_formatted"
+                    echo "Completed code block for file: $current_file_formatted"
                 fi
             fi
             in_block=false
             current_file=""
+            temp_file=""
             continue
         fi
         
-        if [ "$in_block" = true ] && [ -n "$current_file" ]; then
-            if [ -z "$block_content" ]; then
-                block_content="$line"
-            else
-                block_content="$block_content"$'\n'"$line"
-            fi
+        if [ "$in_block" = true ] && [ -n "$current_file" ] && [ -n "$temp_file" ]; then
+            echo "$line" >> "$temp_file"
         fi
     done
 }
@@ -140,6 +135,9 @@ apply_block() {
         echo "Error: Content file not found for $file"
         return
     fi
+    
+    # Normalize file path
+    file=$(realpath -m "$file" 2>/dev/null || echo "$file")
     
     if [ ! -f "$file" ]; then
         if [ "$CREATE_MISSING" = true ]; then
@@ -200,6 +198,7 @@ apply_block() {
         if [ "$BACKUP" = true ]; then
             local backup_file="$BACKUP_DIR/$(basename "$file").$(date +%Y%m%d%H%M%S).bak"
             if [ "$DRY_RUN" = false ]; then
+                mkdir -p "$(dirname "$backup_file")"
                 cp "$file" "$backup_file"
                 if [ "$VERBOSE" = true ]; then
                     echo "Created backup: $backup_file"
