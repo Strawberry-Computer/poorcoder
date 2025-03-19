@@ -13,7 +13,6 @@ GIT_DEPTH=3
 SUMMARY=false
 SHOW_FILE_SIZES=false
 TRUNCATE_LARGE=""
-VERBOSE=false
 INCLUDE_LS_FILES=true
 LS_FILES_LIMIT=100
 
@@ -29,7 +28,6 @@ while [[ "$#" -gt 0 ]]; do
         --summary) SUMMARY=true; shift ;;
         --show-file-sizes) SHOW_FILE_SIZES=true; shift ;;
         --truncate-large=*) TRUNCATE_LARGE="${1#*=}"; shift ;;
-        --verbose) VERBOSE=true; shift ;;
         --ls-files) INCLUDE_LS_FILES=true; shift ;;
         --no-ls-files) INCLUDE_LS_FILES=false; shift ;;
         --ls-files-limit=*) LS_FILES_LIMIT="${1#*=}"; shift ;;
@@ -46,7 +44,6 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --summary                Include short summary of each file"
             echo "  --show-file-sizes        Include file sizes in output"
             echo "  --truncate-large=<size>  Truncate files larger than specified size (e.g., \"50KB\")"
-            echo "  --verbose                Show verbose output"
             echo "  --ls-files               Include git ls-files output (default: true)"
             echo "  --no-ls-files            Don't include git ls-files output"
             echo "  --ls-files-limit=<num>   Limit the number of files shown in ls-files (default: 100)"
@@ -130,9 +127,6 @@ fi
 # Process each file
 for file in $ALL_FILES; do
     if [ ! -f "$file" ]; then
-        if [ "$VERBOSE" = true ]; then
-            echo "Warning: File not found: $file" >&2
-        fi
         continue
     fi
     

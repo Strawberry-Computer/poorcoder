@@ -16,7 +16,7 @@ TESTS_FAILED=0
 TEST_NUMBER_INTERNAL=0
 
 # Print TAP plan
-echo "1..5"
+echo "1..4"  # Reduced from 5 to 4 tests
 
 # Create a temporary directory for this test
 test_dir=$(create_test_dir)
@@ -74,23 +74,7 @@ else
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 
-# Test 4: Verbose option with non-existent file
-TEST_NUMBER_INTERNAL=$((TEST_NUMBER_INTERNAL + 1))
-# Create a temporary file for the error output
-error_log=$(mktemp)
-cd "$test_dir" && "$PROJECT_ROOT/context" nonexistent.js --verbose 2> "$error_log" || true
-if grep -q "Warning: File not found:" "$error_log"; then
-    echo "ok $TEST_NUMBER_INTERNAL - verbose option shows warnings"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
-else
-    echo "not ok $TEST_NUMBER_INTERNAL - verbose option shows warnings"
-    echo "# Error output did not contain warning message"
-    echo "# Output: $(cat "$error_log")"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
-fi
-rm -f "$error_log"
-
-# Test 5: Invalid option
+# Test 4: Invalid option (previously Test 5)
 TEST_NUMBER_INTERNAL=$((TEST_NUMBER_INTERNAL + 1))
 if ! "$PROJECT_ROOT/context" --invalid-option >/dev/null 2>&1; then
     echo "ok $TEST_NUMBER_INTERNAL - invalid option causes error"
