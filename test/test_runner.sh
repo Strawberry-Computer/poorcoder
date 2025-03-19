@@ -15,7 +15,7 @@ TEST_NUMBER=0
 echo "TAP version 13"
 
 # Find all consolidated test files (we now have one file per CLI tool)
-test_files=("$TEST_DIR"/test_*.sh)
+test_files=("$TEST_DIR"/unit/test_*.sh)
 total_test_files=${#test_files[@]}
 echo "1..$total_test_files"
 
