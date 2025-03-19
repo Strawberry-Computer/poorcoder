@@ -77,7 +77,7 @@ else
 fi
 
 # Test 5: Check if output is in markdown format
-if echo "$output" | grep -q "^#" && echo "$output" | grep -q "^```"; then
+if echo "$output" | grep -q "^#" && echo "$output" | grep -q "\`\`\`"; then
     echo "ok $((test_number+=1)) - output is in markdown format"
 else
     echo "not ok $((test_number+=1)) - output is in markdown format"
