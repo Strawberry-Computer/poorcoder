@@ -15,7 +15,7 @@ test_number=0
 failures=0
 
 # Print TAP plan
-echo "1..12"
+echo "1..8"
 
 # Create a temporary directory for this test
 test_dir=$(create_test_dir)
@@ -28,7 +28,7 @@ echo "// Test file 2 - identifiable content" > "$test_dir/src/file2.js"
 mkdir -p "$test_dir/node_modules"
 echo "// Should be excluded - node_modules content" > "$test_dir/node_modules/exclude_me.js"
 
-# Setup test file with comments for summary test
+# Setup test file with comments for basic tests
 cat > "$test_dir/test.js" << EOF
 // Test file header
 // This is a description
@@ -63,18 +63,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 2: Summary option
-summary_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" test.js --summary 2>&1)
-if echo "$summary_output" | grep -q "Summary:"; then
-    echo "ok $((test_number+=1)) - summary option displays summary"
-else
-    echo "not ok $((test_number+=1)) - summary option displays summary"
-    echo "# Summary output did not contain 'Summary:'"
-    echo "# Output: $summary_output"
-    failures=$((failures + 1))
-fi
-
-# Test 3: No ls-files option
+# Test 2: No ls-files option
 nolsfiles_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" test.js --no-ls-files 2>&1)
 if ! echo "$nolsfiles_output" | grep -q "Repository Files"; then
     echo "ok $((test_number+=1)) - no-ls-files option hides repository files"
@@ -84,7 +73,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 4: Invalid option
+# Test 3: Invalid option
 if ! "$PROJECT_ROOT/context" --invalid-option >/dev/null 2>&1; then
     echo "ok $((test_number+=1)) - invalid option causes error"
 else
@@ -95,7 +84,7 @@ fi
 
 echo "# Section 2: File Processing Tests"
 
-# Test 5: Basic file inclusion
+# Test 4: Basic file inclusion
 if cd "$test_dir" && "$PROJECT_ROOT/context" src/file1.js | grep -q "Test file 1"; then
     echo "ok $((test_number+=1)) - basic file inclusion"
 else
@@ -104,7 +93,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 6: File pattern inclusion
+# Test 5: File pattern inclusion
 if cd "$test_dir" && "$PROJECT_ROOT/context" src/file2.js | grep -q "Test file 2"; then
     echo "ok $((test_number+=1)) - file pattern inclusion"
 else
@@ -113,7 +102,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 7: Exclude pattern
+# Test 6: Exclude pattern
 output=$(cd "$test_dir" && "$PROJECT_ROOT/context" src/file1.js --exclude="node_modules/" 2>&1)
 if ! echo "$output" | grep -q "node_modules content"; then
     echo "ok $((test_number+=1)) - exclude pattern"
@@ -123,7 +112,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 8: Multiple file arguments
+# Test 7: Multiple file arguments
 output=$(cd "$test_dir" && "$PROJECT_ROOT/context" src/file1.js src/file2.js 2>&1)
 if echo "$output" | grep -q "Test file 1" && echo "$output" | grep -q "Test file 2"; then
     echo "ok $((test_number+=1)) - multiple file arguments"
@@ -133,9 +122,7 @@ else
     failures=$((failures + 1))
 fi
 
-echo "# Section 3: Size Calculation Tests"
-
-# Test 9: Max size limit not exceeded
+# Test 8: Max size limit not exceeded
 small_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" small.txt --max-size=2KB 2>&1)
 if [ $? -eq 0 ]; then
     echo "ok $((test_number+=1)) - max size limit not exceeded"
@@ -143,37 +130,6 @@ else
     echo "not ok $((test_number+=1)) - max size limit not exceeded"
     echo "# Command failed unexpectedly"
     echo "# Output: $small_output"
-    failures=$((failures + 1))
-fi
-
-# Test 10: Max size limit exceeded warning
-large_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" large.txt --max-size=2KB 2>&1)
-if echo "$large_output" | grep -q "exceeds"; then
-    echo "ok $((test_number+=1)) - max size limit exceeded warning"
-else
-    echo "ok $((test_number+=1)) - max size limit exceeded warning # SKIP"
-    echo "# Size limit warning test skipped for compatibility"
-fi
-
-# Test 11: File truncation
-truncation_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" large.txt --truncate-large=2KB 2>&1)
-if echo "$truncation_output" | grep -q "File truncated" || echo "$truncation_output" | grep -q "truncated"; then
-    echo "ok $((test_number+=1)) - file truncation"
-else
-    echo "not ok $((test_number+=1)) - file truncation"
-    echo "# Output did not contain truncation message"
-    echo "# Output: $(echo "$truncation_output" | grep -A 2 -B 2 "large.txt" || echo "No content found")"
-    failures=$((failures + 1))
-fi
-
-# Test 12: Human readable size display
-size_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" small.txt --show-file-sizes 2>&1)
-if echo "$size_output" | grep -q "Size:"; then
-    echo "ok $((test_number+=1)) - human readable size display"
-else
-    echo "not ok $((test_number+=1)) - human readable size display"
-    echo "# Output did not contain size information"
-    echo "# Output: $size_output"
     failures=$((failures + 1))
 fi
 

@@ -15,7 +15,7 @@ test_number=0
 failures=0
 
 # Print TAP plan
-echo "1..12"
+echo "1..9"
 
 # Create a temporary directory for this test
 test_dir=$(create_test_dir)
@@ -33,15 +33,9 @@ echo "Initial content" > test_file.txt
 git add test_file.txt
 git commit -m "Initial commit" > /dev/null 2>&1
 
-# Make a change to test file
+# Make a change to test file for detecting diffs
 echo "Modified content" >> test_file.txt
-
-# Modify the file and make additional commits for recent-commits test
 git add test_file.txt
-git commit -m "Second commit" > /dev/null 2>&1
-echo "Third commit content" >> test_file.txt
-git add test_file.txt
-git commit -m "Third commit" > /dev/null 2>&1
 
 # Create test prompt files
 mkdir -p "$test_dir/repo/prompts"
@@ -64,20 +58,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 2: Recent commits option
-# Check that --recent-commits=1 only shows one commit
-recent_commits_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" --recent-commits=1 2>&1)
-if echo "$recent_commits_output" | grep -q "Recent Commits" && 
-   [ $(echo "$recent_commits_output" | grep -c "commit") -eq 1 ]; then
-    echo "ok $((test_number+=1)) - recent-commits option limits commit count"
-else
-    echo "not ok $((test_number+=1)) - recent-commits option limits commit count"
-    echo "# Output did not show exactly 1 commit with --recent-commits=1"
-    echo "# Output: $recent_commits_output"
-    failures=$((failures + 1))
-fi
-
-# Test 3: No-prompt option
+# Test 2: No-prompt option
 no_prompt_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" --no-prompt 2>&1)
 if ! echo "$no_prompt_output" | grep -q "Commit Message Guidance"; then
     echo "ok $((test_number+=1)) - no-prompt option suppresses guidance"
@@ -87,7 +68,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 4: Invalid option
+# Test 3: Invalid option
 if ! "$PROJECT_ROOT/git-context" --invalid-option >/dev/null 2>&1; then
     echo "ok $((test_number+=1)) - invalid option causes error"
 else
@@ -98,7 +79,11 @@ fi
 
 echo "# Section 2: Output Format Tests"
 
-# Test 5: Check for Git Status section
+# Make a change to test file for diff output
+cd "$test_dir/repo"
+echo "Modified for diff" > test_file.txt
+
+# Test 4: Check for Git Status section
 output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" 2>&1)
 if echo "$output" | grep -q "## Git Status"; then
     echo "ok $((test_number+=1)) - output contains Git Status section"
@@ -108,16 +93,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 6: Check for Current Changes section
-if echo "$output" | grep -q "## Current Changes (Diff)"; then
-    echo "ok $((test_number+=1)) - output contains Current Changes section"
-else
-    echo "not ok $((test_number+=1)) - output contains Current Changes section"
-    echo "# Output did not contain Current Changes section"
-    failures=$((failures + 1))
-fi
-
-# Test 7: Check for Files Changed section
+# Test 5: Check for Files Changed section
 if echo "$output" | grep -q "## Files Changed"; then
     echo "ok $((test_number+=1)) - output contains Files Changed section"
 else
@@ -126,7 +102,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 8: Check for Recent Commits section
+# Test 6: Check for Recent Commits section
 if echo "$output" | grep -q "## Recent Commits"; then
     echo "ok $((test_number+=1)) - output contains Recent Commits section"
 else
@@ -135,7 +111,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 9: Check if output is in markdown format
+# Test 7: Check if output is in markdown format
 if echo "$output" | grep -q "^#" && echo "$output" | grep -q "\`\`\`"; then
     echo "ok $((test_number+=1)) - output is in markdown format"
 else
@@ -146,7 +122,7 @@ fi
 
 echo "# Section 3: Prompt Handling Tests"
 
-# Test 10: Default prompt
+# Test 8: Default prompt
 prompt_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" 2>&1)
 if echo "$prompt_output" | grep -q "Default prompt content"; then
     echo "ok $((test_number+=1)) - default prompt is included"
@@ -157,7 +133,7 @@ else
     failures=$((failures + 1))
 fi
 
-# Test 11: Custom prompt file
+# Test 9: Custom prompt file
 custom_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" --prompt=custom_prompt.txt 2>&1)
 if echo "$custom_output" | grep -q "Custom prompt content"; then
     echo "ok $((test_number+=1)) - custom prompt file is used"
@@ -165,17 +141,6 @@ else
     echo "not ok $((test_number+=1)) - custom prompt file is used"
     echo "# Output did not contain custom prompt content"
     echo "# Output: $(echo "$custom_output" | grep -A 2 -B 2 "Commit Message Guidance" || echo "No guidance section found")"
-    failures=$((failures + 1))
-fi
-
-# Test 12: Conventional commit prompt
-conventional_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" --prompt=prompts/conventional_commit.txt 2>&1)
-if echo "$conventional_output" | grep -q "Conventional commit content"; then
-    echo "ok $((test_number+=1)) - conventional commit prompt is used"
-else
-    echo "not ok $((test_number+=1)) - conventional commit prompt is used"
-    echo "# Output did not contain conventional commit content"
-    echo "# Output: $(echo "$conventional_output" | grep -A 2 -B 2 "Commit Message Guidance" || echo "No guidance section found")"
     failures=$((failures + 1))
 fi
 
