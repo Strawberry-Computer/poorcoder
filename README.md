@@ -1,6 +1,6 @@
 # Minimalistic AI Coding Assistant
 
-A collection of lightweight Bash scripts to enhance your coding workflow with AI assistance.
+A collection of lightweight Bash scripts to enhance your coding workflow with AI assistance. These tools integrate seamlessly with your terminal workflow, allowing you to leverage AI models without disrupting your development process.
 
 ## Overview
 
@@ -56,11 +56,59 @@ Generates git-related context to help LLMs create meaningful commit messages.
 
 ## Usage Workflows
 
-### Scenario: Code Refactoring
+### Unix-style Pipelines
 
-1. Generate context from your code:
+These tools are designed to work seamlessly in Unix pipelines, allowing you to create powerful workflows with minimal effort:
+
+```bash
+# Copy code context directly to clipboard (macOS)
+./context --files="src/api/*.js" | pbcopy
+
+# Generate and apply code changes directly from clipboard (macOS)
+pbpaste | ./apply-md
+
+# Auto-generate commit message using an LLM CLI tool
+git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
+
+# Stream context to an LLM and apply changes in one command
+./context --files="src/components/Button.js" | llm "Refactor this component to use hooks" | ./apply-md
+```
+
+### Scenario: Bug Fix Workflow
+
+Let's walk through a complete workflow for fixing a bug:
+
+1. Identify the files involved in the bug:
    ```bash
-   ./context --files="src/utils/parser.js" --depth=1 > parser_context.txt
+   # Generate context for the relevant files
+   ./context --files="src/utils/validation.js" --files="src/components/Form.js" --depth=1 | pbcopy
+   ```
+
+2. Paste the context into your preferred AI assistant's web UI with your request:
+   "There's a bug where form validation fails when empty strings are submitted. Please fix it."
+
+3. Copy the AI's response and apply the suggested changes:
+   ```bash
+   pbpaste | ./apply-md --dry-run  # Preview changes
+   pbpaste | ./apply-md            # Apply changes
+   ```
+
+4. Generate an appropriate commit message:
+   ```bash
+   # Auto-generate semantically meaningful commit message
+   ./git-context --diff | llm "Generate a conventional commit message" | git commit -F -
+   
+   # Or with manual editing
+   git commit -am "$(./git-context | llm "Write a commit message")" -e
+   ```
+
+### Scenario: Code Refactoring with Git Integration
+
+When working on larger refactoring tasks:
+
+1. Generate context with git history for better understanding:
+   ```bash
+   ./context --files="src/utils/parser.js" --depth=1 --include-git --git-depth=5 > parser_context.txt
    ```
 
 2. Send the context to an LLM with your request (e.g., "Refactor this parser to improve performance")
@@ -72,16 +120,35 @@ Generates git-related context to help LLMs create meaningful commit messages.
    cat response.md | ./apply-md
    ```
 
-4. Generate commit context:
+4. Generate commit context and message in one step:
    ```bash
-   ./git-context --diff --prompt > commit_context.txt
+   git commit -am "$(./git-context --diff --conventional | llm "Generate a detailed commit message")" -e
    ```
-
-5. Get a commit message from the LLM and commit your changes
 
 ## Customization
 
 All prompts used in the scripts are stored in the `prompts/` directory as text files, making them easy to customize for your specific needs.
+
+### Custom Prompts
+
+You can create your own prompt templates for different scenarios:
+
+```bash
+# Create a custom prompt for code review
+echo "Please review this code and identify potential bugs and security issues." > prompts/review_prompt.txt
+
+# Use your custom prompt with the context generator
+./context --files="src/*.js" | cat - prompts/review_prompt.txt | llm
+```
+
+### Integration with Other Tools
+
+These scripts are designed to work with various LLM CLI tools and other Unix utilities:
+
+- **LLM CLI tools**: `llm`, `sgpt`, `chatgpt-cli`, etc.
+- **Clipboard utilities**: `pbcopy`/`pbpaste` (macOS), `xclip` (Linux)
+- **Text processing**: `sed`, `awk`, `grep`, etc.
+- **Version control**: `git`
 
 ## Contributing
 
