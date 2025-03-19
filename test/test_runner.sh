@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# test_runner.sh - Main test runner for context script
-
-# Exit on error
-set -e
+# test_runner.sh - Main test runner for context script (TAP-compliant)
 
 # Get the directory where the test_runner.sh script is located
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,32 +9,58 @@ PROJECT_ROOT="$(cd "$TEST_DIR/.." && pwd)"
 # Source test utilities
 source "$TEST_DIR/test_utils.sh"
 
-# Print header
-echo "===================================="
-echo "Running tests for context script"
-echo "===================================="
+# Initialize counters
+TESTS_PASSED=0
+TESTS_FAILED=0
+TEST_NUMBER=0
+
+# Print TAP header
+echo "TAP version 13"
+
+# Find all test files
+test_files=("$TEST_DIR"/unit/test_*.sh)
+total_test_files=${#test_files[@]}
+echo "1..$total_test_files"
+
+# Create or clear the test results file
+echo "PASSED:0" > "$TEST_DIR/test_results.txt"
+echo "FAILED:0" >> "$TEST_DIR/test_results.txt"
+
+# Make test utilities executable
+chmod +x "$TEST_DIR/test_utils.sh"
+
+# Make test scripts executable
+for test_file in "${test_files[@]}"; do
+    chmod +x "$test_file"
+done
 
 # Run all test files
-for test_file in "$TEST_DIR"/unit/test_*.sh; do
+for test_file in "${test_files[@]}"; do
     if [ -f "$test_file" ]; then
-        echo ""
-        echo "Running tests in $(basename "$test_file")"
-        echo "------------------------------------"
-        bash "$test_file"
+        TEST_NUMBER=$((TEST_NUMBER + 1))
+        test_name=$(basename "$test_file" .sh | sed 's/^test_//')
         
-        # Capture exit status
+        # Run the test and capture its output
+        test_output=$("$test_file" 2>&1)
         test_status=$?
-        if [ $test_status -ne 0 ]; then
-            echo "Test file $(basename "$test_file") failed with status $test_status"
+        
+        if [ $test_status -eq 0 ]; then
+            echo "ok $TEST_NUMBER - $test_name"
+            TESTS_PASSED=$((TESTS_PASSED + 1))
+        else
+            echo "not ok $TEST_NUMBER - $test_name"
+            echo "# Test output:"
+            echo "$test_output" | sed 's/^/#  /'
+            TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
     fi
 done
 
 # Print summary
-echo ""
-echo "===================================="
-echo "Test Results: $TESTS_PASSED passed, $TESTS_FAILED failed"
-echo "===================================="
+total_tests=$((TESTS_PASSED + TESTS_FAILED))
+echo "# Tests: $total_tests"
+echo "# Pass:  $TESTS_PASSED"
+echo "# Fail:  $TESTS_FAILED"
 
 # Return non-zero exit code if any tests failed
 if [ $TESTS_FAILED -gt 0 ]; then
