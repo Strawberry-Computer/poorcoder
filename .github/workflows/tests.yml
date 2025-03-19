@@ -19,7 +19,7 @@ jobs:
     - name: Set up environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y bc tap-tap
+        sudo apt-get install -y bc
     
     - name: Make scripts executable
       run: |
@@ -30,11 +30,6 @@ jobs:
     - name: Run tests
       run: |
         ./test/test_runner.sh
-    
-    - name: Run tests with TAP formatter (for nicer output)
-      if: always()  # Run even if the previous step failed
-      run: |
-        ./test/test_runner.sh | tap-tap
 
   lint:
     runs-on: ubuntu-latest
