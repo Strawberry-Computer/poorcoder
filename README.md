@@ -29,7 +29,7 @@ You can either use the scripts directly from this folder or add them to your PAT
 Generates contextual information from a codebase to send to an LLM.
 
 ```bash
-./context --files="src/components/*.js" --exclude="*.test.js" --max-size=300KB --include-deps --format=md > context.txt
+./context --files="src/components/*.js" --exclude="*.test.js" --max-size=300KB --depth=2 --include-git > context.txt
 ```
 
 [See full documentation for context](./docs/context.md)
@@ -60,7 +60,7 @@ Generates git-related context to help LLMs create meaningful commit messages.
 
 1. Generate context from your code:
    ```bash
-   ./context --files="src/utils/parser.js" --include-deps > parser_context.txt
+   ./context --files="src/utils/parser.js" --depth=1 > parser_context.txt
    ```
 
 2. Send the context to an LLM with your request (e.g., "Refactor this parser to improve performance")

@@ -2,19 +2,19 @@
 
 ## Overview
 
-The `context` tool extracts relevant code and context from your codebase to send to an LLM (Large Language Model).
+The `context` tool extracts relevant code and context from your codebase to send to an LLM (Large Language Model). It helps create focused, comprehensive snapshots of your codebase for more accurate AI assistance.
 
 ## Usage
 
 ```bash
 # Using patterns
-./context --files="src/components/*.js" --exclude="*.test.js" --max-size=300KB --format=md > context.txt
+./context --files="src/components/*.js" --exclude="*.test.js" --max-size=300KB > context.txt
 
 # Using direct file paths
 ./context src/app.js src/utils.js README.md > context.txt
 
-# Including a prompt template
-./context --prompt=prompts/context_prompt.txt app.js > context.txt
+# Including git information and custom depth
+./context --files="src/*.js" --include-git --git-depth=5 --depth=2 > context.txt
 ```
 
 ## Arguments
@@ -22,21 +22,20 @@ The `context` tool extracts relevant code and context from your codebase to send
 | Argument | Description | Default |
 |----------|-------------|---------|
 | `--files=<pattern>` | File pattern to include (e.g., "src/*.js") | None |
-| Direct file arguments | Files or directories to include (e.g., app.js README.md) | None |
+| Direct file arguments | Files to include (e.g., app.js README.md) | None |
 | `--exclude=<pattern>` | File pattern to exclude (e.g., "node_modules/**") | None |
 | `--max-size=<size>` | Maximum context size in KB/MB (e.g., "500KB") | "500KB" |
-| `--include-deps` | Include dependent files based on imports/requires | False |
 | `--depth=<num>` | Dependency traversal depth | 1 |
 | `--include-git` | Include git information (recent commits, authors) | False |
 | `--git-depth=<num>` | Number of recent commits to include | 3 |
-| `--format=<format>` | Output format (md, json, text) | "md" |
 | `--summary` | Include short summary of each file | False |
 | `--show-file-sizes` | Include file sizes in output | False |
 | `--truncate-large=<size>` | Truncate files larger than specified size (e.g., "50KB") | None |
-| `--prompt=<file>` | Include prompt template from specified file | None |
+| `--verbose` | Show verbose output during processing | False |
 | `--ls-files` | Include git ls-files output | True |
 | `--no-ls-files` | Don't include git ls-files output | False |
 | `--ls-files-limit=<num>` | Limit the number of files shown in ls-files | 100 |
+| `--help`, `-h` | Show help message | - |
 
 ## Examples
 
@@ -48,15 +47,23 @@ Extract all JS files in the src directory:
 ./context --files="src/**/*.js" > code_context.md
 ```
 
-### With Dependencies
+### Exclude Specific Files
 
-Include imported/required files (1 level deep):
+Include all JavaScript files but exclude test files:
 
 ```bash
-./context --files="src/components/Button.js" --include-deps > button_context.md
+./context --files="src/**/*.js" --exclude="**/*.test.js" > context.md
 ```
 
-### Include Git Information
+### Custom Size Limits
+
+Set maximum context size and truncate large files:
+
+```bash
+./context --files="src/*.js" --max-size=1MB --truncate-large=50KB > context.md
+```
+
+### Git Information
 
 Generate context with git history:
 
@@ -64,25 +71,42 @@ Generate context with git history:
 ./context --files="src/utils/*.js" --include-git --git-depth=5 > utils_context.md
 ```
 
-### JSON Output
+### File Summary and Sizes
 
-Get context in JSON format for programmatic usage:
+Include file summaries and size information:
 
 ```bash
-./context --files="*.py" --format=json > context.json
+./context --files="src/*.py" --summary --show-file-sizes > context.md
 ```
 
-## Customization
+### Control Repository File Listing
 
-The script is designed to be simple and easy to modify. You can:
+Limit the number of files shown in the repository listing:
 
-1. Add support for more languages in the dependency resolution
-2. Modify the output format for your specific needs
-3. Add additional metadata to the context generation
+```bash
+./context --files="src/main.js" --ls-files-limit=50 > context.md
+```
+
+Or disable the repository file listing completely:
+
+```bash
+./context --files="src/main.js" --no-ls-files > context.md
+```
+
+## Output Format
+
+The tool generates markdown output with the following sections:
+
+1. **Code Context** - The main header
+2. **Files** - The content of each matched file
+3. **Git Information** (if requested) - Recent commits and branch information
+4. **Repository Files** - List of files in the git repository
+5. **Instructions for LLM** (if available) - Instructions from a prompt template
 
 ## Tips
 
-- When working with LLMs, try to keep the context focused and relevant
-- Use `--exclude` to filter out test files, build artifacts, etc.
-- The `--summary` flag can help provide high-level context about each file
-- If you hit token limits, use `--truncate-large` to limit file sizes
+- Keep the context focused and relevant for the task at hand
+- Use `--exclude` to filter out test files, build artifacts, and other non-essential files
+- The `--summary` flag helps provide high-level context about each file
+- If you hit token limits with your LLM, use `--truncate-large` to limit file sizes
+- For large repositories, adjust `--ls-files-limit` to show only the most relevant files
