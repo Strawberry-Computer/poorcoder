@@ -170,13 +170,14 @@ for file in $ALL_FILES; do
         echo ""
     fi
     
-    echo "``````${file##*.} $file"
+    # Use proper markdown code block with three backticks
+    echo "\`\`\` ${file##*.} $file"
     echo "$file_content"
     if [ "$truncated" = true ]; then
         echo ""
         echo "... [File truncated due to size limit] ..."
     fi
-    echo "``````"
+    echo "\`\`\`"
     echo ""
 done
 
