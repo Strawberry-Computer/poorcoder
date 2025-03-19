@@ -7,15 +7,12 @@
 FILES=()
 EXCLUDE=""
 MAX_SIZE="500KB"
-INCLUDE_DEPS=false
 DEPTH=1
 INCLUDE_GIT=false
 GIT_DEPTH=3
-FORMAT="md"
 SUMMARY=false
 SHOW_FILE_SIZES=false
 TRUNCATE_LARGE=""
-PROMPT_FILE=""
 VERBOSE=false
 INCLUDE_LS_FILES=true
 LS_FILES_LIMIT=100
@@ -26,15 +23,12 @@ while [[ "$#" -gt 0 ]]; do
         --files=*) FILES+=("${1#*=}"); shift ;;
         --exclude=*) EXCLUDE="${1#*=}"; shift ;;
         --max-size=*) MAX_SIZE="${1#*=}"; shift ;;
-        --include-deps) INCLUDE_DEPS=true; shift ;;
         --depth=*) DEPTH="${1#*=}"; shift ;;
         --include-git) INCLUDE_GIT=true; shift ;;
         --git-depth=*) GIT_DEPTH="${1#*=}"; shift ;;
-        --format=*) FORMAT="${1#*=}"; shift ;;
         --summary) SUMMARY=true; shift ;;
         --show-file-sizes) SHOW_FILE_SIZES=true; shift ;;
         --truncate-large=*) TRUNCATE_LARGE="${1#*=}"; shift ;;
-        --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
         --verbose) VERBOSE=true; shift ;;
         --ls-files) INCLUDE_LS_FILES=true; shift ;;
         --no-ls-files) INCLUDE_LS_FILES=false; shift ;;
@@ -46,15 +40,12 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --files=<pattern>        File pattern to include (e.g., \"src/*.js\")"
             echo "  --exclude=<pattern>      File pattern to exclude (e.g., \"node_modules/**\")"
             echo "  --max-size=<size>        Maximum context size in KB/MB (e.g., \"500KB\")"
-            echo "  --include-deps           Include dependent files based on imports/requires"
             echo "  --depth=<num>            Dependency traversal depth (default: 1)"
             echo "  --include-git            Include git information (recent commits, authors)"
             echo "  --git-depth=<num>        Number of recent commits to include (default: 3)"
-            echo "  --format=<format>        Output format (md, json, text) (default: md)"
             echo "  --summary                Include short summary of each file"
             echo "  --show-file-sizes        Include file sizes in output"
             echo "  --truncate-large=<size>  Truncate files larger than specified size (e.g., \"50KB\")"
-            echo "  --prompt=<file>          Include prompt template from specified file"
             echo "  --verbose                Show verbose output"
             echo "  --ls-files               Include git ls-files output (default: true)"
             echo "  --no-ls-files            Don't include git ls-files output"
@@ -91,13 +82,10 @@ fi
 find_files() {
     local all_files=""
     
-    # Process each file or pattern
     for file_pattern in "${FILES[@]}"; do
-        # Check if it's a direct file path
         if [ -f "$file_pattern" ]; then
             all_files="$all_files"$'\n'"$file_pattern"
         else
-            # It's a pattern, use find
             local find_cmd="find . -type f -path \"$file_pattern\""
             if [ -n "$EXCLUDE" ]; then
                 find_cmd="$find_cmd -not -path \"$EXCLUDE\""
@@ -109,7 +97,6 @@ find_files() {
         fi
     done
     
-    # Remove empty lines and sort
     echo "$all_files" | grep -v "^$" | sort | uniq
 }
 
@@ -128,188 +115,88 @@ human_readable_size() {
         unit_index=$((unit_index + 1))
     done
     
-    # Remove trailing zeros and decimal point if it's a whole number
     size_float=$(echo $size_float | sed 's/\.0*$//')
-    
     echo "$size_float ${units[$unit_index]}"
 }
 
-# Start the output based on format
-case $FORMAT in
-    md)
-        echo "# Code Context"
-        echo ""
-        if [ ${#FILES[@]} -gt 0 ]; then
-            echo "## Files"
-            echo ""
-        fi
-        ;;
-    json)
-        echo "{"
-        echo "  \"files\": ["
-        ;;
-    text)
-        echo "CODE CONTEXT"
-        echo "============"
-        echo ""
-        ;;
-esac
-
-# Process each file (only if files were specified)
-file_count=0
+# Start Markdown output
+echo "# Code Context"
+echo ""
 if [ ${#FILES[@]} -gt 0 ]; then
-    for file in $ALL_FILES; do
-        if [ ! -f "$file" ]; then
-            if [ "$VERBOSE" = true ]; then
-                echo "Warning: File not found: $file" >&2
-            fi
-            continue
-        fi
-        
-        file_size=$(wc -c < "$file")
-        TOTAL_SIZE=$((TOTAL_SIZE + file_size))
-        truncated=false
-        file_content=""
-        
-        # Check if we need to truncate the file
-        if [ $TRUNCATE_SIZE_BYTES -gt 0 ] && [ $file_size -gt $TRUNCATE_SIZE_BYTES ]; then
-            file_content=$(head -c $TRUNCATE_SIZE_BYTES "$file")
-            truncated=true
-        else
-            file_content=$(cat "$file")
-        fi
-        
-        # Get file summary if needed
-        file_summary=""
-        if [ "$SUMMARY" = true ]; then
-            file_summary=$(head -n 20 "$file" | grep -E "^(//|#|/*) " | head -n 5 | sed 's/^[\/\#\* ]*//')
-        fi
-        
-        # Format the output based on chosen format
-        case $FORMAT in
-            md)
-                if [ "$SHOW_FILE_SIZES" = true ]; then
-                    echo "Size: $(human_readable_size $file_size)"
-                    echo ""
-                fi
-                
-                if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
-                    echo "Summary:"
-                    echo "$file_summary"
-                    echo ""
-                fi
-                
-                echo "``````${file##*.} $file"
-                echo "$file_content"
-                if [ "$truncated" = true ]; then
-                    echo ""
-                    echo "... [File truncated due to size limit] ..."
-                fi
-                echo "``````"
-                echo ""
-                ;;
-            json)
-                # Escape special characters for JSON
-                file_content_json=$(echo "$file_content" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-                if [ $file_count -gt 0 ]; then
-                    echo "  ,"
-                fi
-                echo "    {"
-                echo "      \"path\": \"$file\","
-                if [ "$SHOW_FILE_SIZES" = true ]; then
-                    echo "      \"size\": $file_size,"
-                fi
-                if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
-                    file_summary_json=$(echo "$file_summary" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-                    echo "      \"summary\": \"$file_summary_json\","
-                fi
-                echo "      \"content\": \"$file_content_json\""
-                if [ "$truncated" = true ]; then
-                    echo "      \"truncated\": true"
-                fi
-                echo -n "    }"
-                ;;
-            text)
-                echo "=== $file ==="
-                if [ "$SHOW_FILE_SIZES" = true ]; then
-                    echo "Size: $(human_readable_size $file_size)"
-                fi
-                
-                if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
-                    echo "Summary:"
-                    echo "$file_summary"
-                fi
-                
-                echo "-----"
-                echo "$file_content"
-                if [ "$truncated" = true ]; then
-                    echo "... [File truncated due to size limit] ..."
-                fi
-                echo "-----"
-                echo ""
-                ;;
-        esac
-        
-        file_count=$((file_count + 1))
-    done
+    echo "## Files"
+    echo ""
 fi
+
+# Process each file
+for file in $ALL_FILES; do
+    if [ ! -f "$file" ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "Warning: File not found: $file" >&2
+        fi
+        continue
+    fi
+    
+    file_size=$(wc -c < "$file")
+    TOTAL_SIZE=$((TOTAL_SIZE + file_size))
+    
+    if [ $TOTAL_SIZE -gt $MAX_SIZE_BYTES ]; then
+        echo "Error: Total context size ($TOTAL_SIZE bytes) exceeds maximum allowed size ($(human_readable_size $MAX_SIZE_BYTES)). Reduce file scope or increase --max-size." >&2
+        exit 1
+    fi
+    
+    truncated=false
+    file_content=""
+    
+    if [ $TRUNCATE_SIZE_BYTES -gt 0 ] && [ $file_size -gt $TRUNCATE_SIZE_BYTES ]; then
+        file_content=$(head -c $TRUNCATE_SIZE_BYTES "$file")
+        truncated=true
+    else
+        file_content=$(cat "$file")
+    fi
+    
+    file_summary=""
+    if [ "$SUMMARY" = true ]; then
+        file_summary=$(head -n 20 "$file" | grep -E "^(//|#|/*) " | head -n 5 | sed 's/^[\/\#\* ]*//')
+    fi
+    
+    if [ "$SHOW_FILE_SIZES" = true ]; then
+        echo "Size: $(human_readable_size $file_size)"
+        echo ""
+    fi
+    
+    if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
+        echo "Summary:"
+        echo "$file_summary"
+        echo ""
+    fi
+    
+    echo "``````${file##*.} $file"
+    echo "$file_content"
+    if [ "$truncated" = true ]; then
+        echo ""
+        echo "... [File truncated due to size limit] ..."
+    fi
+    echo "``````"
+    echo ""
+done
 
 # Include git information if requested
 if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    case $FORMAT in
-        md)
-            echo "## Git Information"
-            echo ""
-            echo "### Recent Commits"
-            echo ""
-            git log -n $GIT_DEPTH --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
-                echo "$line"
-            done
-            echo ""
-            echo "### Branch Information"
-            echo ""
-            echo "Current branch: $(git branch --show-current)"
-            echo ""
-            ;;
-        json)
-            echo "  ,"
-            echo "  \"git\": {"
-            echo "    \"commits\": ["
-            commit_count=0
-            git log -n $GIT_DEPTH --pretty=format:"%h|%s|%an|%ar" | while IFS="|" read -r hash message author date; do
-                if [ $commit_count -gt 0 ]; then
-                    echo "    ,"
-                fi
-                echo "      {"
-                echo "        \"hash\": \"$hash\","
-                echo "        \"message\": \"$(echo "$message" | sed 's/"/\\"/g')\","
-                echo "        \"author\": \"$(echo "$author" | sed 's/"/\\"/g')\","
-                echo "        \"date\": \"$date\""
-                echo -n "      }"
-                commit_count=$((commit_count + 1))
-            done
-            echo ""
-            echo "    ],"
-            echo "    \"branch\": \"$(git branch --show-current)\""
-            echo "  }"
-            ;;
-        text)
-            echo "GIT INFORMATION"
-            echo "------------"
-            echo ""
-            echo "Recent Commits:"
-            git log -n $GIT_DEPTH --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
-                echo "$line"
-            done
-            echo ""
-            echo "Branch Information:"
-            echo "Current branch: $(git branch --show-current)"
-            echo ""
-            ;;
-    esac
+    echo "## Git Information"
+    echo ""
+    echo "### Recent Commits"
+    echo ""
+    git log -n $GIT_DEPTH --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
+        echo "$line"
+    done
+    echo ""
+    echo "### Branch Information"
+    echo ""
+    echo "Current branch: $(git branch --show-current)"
+    echo ""
 fi
 
-# Include git ls-files output if requested and we're in a git repo
+# Include git ls-files output if requested
 if [ "$INCLUDE_LS_FILES" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     GIT_FILES=$(git ls-files | sort)
     GIT_FILES_COUNT=$(echo "$GIT_FILES" | wc -l)
@@ -321,83 +208,23 @@ if [ "$INCLUDE_LS_FILES" = true ] && command -v git >/dev/null 2>&1 && git rev-p
         GIT_FILES_TRUNCATED=false
     fi
     
-    case $FORMAT in
-        md)
-            echo "## Repository Files"
-            echo ""
-            echo "$GIT_FILES" | while read -r file; do
-                echo "- $file"
-            done
-            if [ "$GIT_FILES_TRUNCATED" = true ]; then
-                echo "- ... (and $(($GIT_FILES_COUNT - $LS_FILES_LIMIT)) more files)"
-            fi
-            echo ""
-            ;;
-        json)
-            echo "  ,"
-            echo "  \"repository_files\": {"
-            echo "    \"count\": $GIT_FILES_COUNT,"
-            echo "    \"truncated\": $GIT_FILES_TRUNCATED,"
-            echo "    \"files\": ["
-            first=true
-            echo "$GIT_FILES" | while read -r file; do
-                if [ "$first" = true ]; then
-                    first=false
-                else
-                    echo ","
-                fi
-                echo -n "      \"$file\""
-            done
-            echo ""
-            echo "    ]"
-            echo "  }"
-            ;;
-        text)
-            echo "REPOSITORY FILES"
-            echo "---------------"
-            echo ""
-            echo "$GIT_FILES" | while read -r file; do
-                echo "* $file"
-            done
-            if [ "$GIT_FILES_TRUNCATED" = true ]; then
-                echo "* ... (and $(($GIT_FILES_COUNT - $LS_FILES_LIMIT)) more files)"
-            fi
-            echo ""
-            ;;
-    esac
+    echo "## Repository Files"
+    echo ""
+    echo "$GIT_FILES" | while read -r file; do
+        echo "- $file"
+    done
+    if [ "$GIT_FILES_TRUNCATED" = true ]; then
+        echo "- ... (and $(($GIT_FILES_COUNT - $LS_FILES_LIMIT)) more files)"
+    fi
+    echo ""
 fi
 
-# Close JSON if needed
-if [ "$FORMAT" = "json" ]; then
+# Include default prompt if available
+if [ -f "prompts/context_prompt.txt" ]; then
+    echo "## Instructions for LLM"
     echo ""
-    echo "  ]"
-    
-    if [ -n "$PROMPT_FILE" ] && [ -f "$PROMPT_FILE" ]; then
-        prompt_content=$(cat "$PROMPT_FILE" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-        echo "  ,"
-        echo "  \"prompt\": \"$prompt_content\""
-    fi
-    
-    echo "}"
-else
-    # Include prompt template if specified
-    if [ -n "$PROMPT_FILE" ] && [ -f "$PROMPT_FILE" ]; then
-        case $FORMAT in
-            md)
-                echo "## Instructions for LLM"
-                echo ""
-                cat "$PROMPT_FILE"
-                echo ""
-                ;;
-            text)
-                echo "INSTRUCTIONS FOR LLM"
-                echo "-------------------"
-                echo ""
-                cat "$PROMPT_FILE"
-                echo ""
-                ;;
-        esac
-    fi
+    cat "prompts/context_prompt.txt"
+    echo ""
 fi
 
 exit 0

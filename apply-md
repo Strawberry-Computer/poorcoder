@@ -78,9 +78,7 @@ extract_blocks() {
     local in_block=false
     local block_content=""
     
-    # Split markdown into lines
     echo "$MARKDOWN" | while IFS= read -r line; do
-        # Check if line starts a code block with a file name
         if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]+(.+) ]]; then
             current_file="${BASH_REMATCH[2]}"
             in_block=true
@@ -88,21 +86,16 @@ extract_blocks() {
             continue
         fi
         
-        # Check if line starts a code block without a file name (ignore these)
         if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]*$ ]]; then
             in_block=false
             current_file=""
             continue
         fi
         
-        # Check if line ends a code block
         if [[ "$line" =~ ^[[:space:]]*\`\`\`[[:space:]]*$ ]]; then
             if [ -n "$current_file" ] && [ "$in_block" = true ]; then
-                # Save block to a file
                 echo "$current_file" >> "$FILES_FILE"
                 echo "$block_content" > "$TEMP_DIR/$current_file"
-                
-                # Format file path for output consistency
                 current_file_formatted=$(echo "$current_file" | sed 's/^\.\///')
                 if [ "$VERBOSE" = true ]; then
                     echo "Found code block for file: $current_file_formatted"
@@ -113,7 +106,6 @@ extract_blocks() {
             continue
         fi
         
-        # Collect content if inside a block
         if [ "$in_block" = true ] && [ -n "$current_file" ]; then
             if [ -z "$block_content" ]; then
                 block_content="$line"
@@ -130,7 +122,6 @@ apply_block() {
     local content_file="$TEMP_DIR/$file"
     local skipped=false
     
-    # Check if file should be ignored
     if [ -n "$IGNORE_FILES" ] && [[ "$file" == $IGNORE_FILES ]]; then
         if [ "$VERBOSE" = true ]; then
             echo "Skipping ignored file: $file"
@@ -138,7 +129,6 @@ apply_block() {
         return
     fi
     
-    # Check if file should be included
     if [ -n "$ONLY_FILES" ] && [[ "$file" != $ONLY_FILES ]]; then
         if [ "$VERBOSE" = true ]; then
             echo "Skipping file not matching include pattern: $file"
@@ -146,16 +136,13 @@ apply_block() {
         return
     fi
     
-    # Ensure the content file exists
     if [ ! -f "$content_file" ]; then
         echo "Error: Content file not found for $file"
         return
     fi
     
-    # Check if target file exists
     if [ ! -f "$file" ]; then
         if [ "$CREATE_MISSING" = true ]; then
-            # Create the directory if it doesn't exist
             if [ "$DRY_RUN" = false ]; then
                 mkdir -p "$(dirname "$file")"
                 cat "$content_file" > "$file"
@@ -174,7 +161,6 @@ apply_block() {
         return
     fi
     
-    # Check if content is unchanged
     if [ "$SKIP_UNCHANGED" = true ]; then
         diff -q "$file" "$content_file" > /dev/null
         if [ $? -eq 0 ]; then
@@ -185,9 +171,7 @@ apply_block() {
         fi
     fi
     
-    # Apply changes if not skipped
     if [ "$skipped" = false ]; then
-        # Check if changes are needed
         local changes=$(diff -u "$file" "$content_file")
         if [ -z "$changes" ]; then
             if [ "$VERBOSE" = true ]; then
@@ -196,7 +180,6 @@ apply_block() {
             return
         fi
         
-        # Show changes if verbose
         if [ "$VERBOSE" = true ]; then
             echo "Changes for $file:"
             echo "$changes"
@@ -205,7 +188,6 @@ apply_block() {
             echo "Modifying: $file"
         fi
         
-        # Ask for confirmation if needed
         if [ "$CONFIRM" = true ]; then
             read -p "Apply changes to $file? (y/n) " -n 1 -r
             echo
@@ -215,7 +197,6 @@ apply_block() {
             fi
         fi
         
-        # Create backup if needed
         if [ "$BACKUP" = true ]; then
             local backup_file="$BACKUP_DIR/$(basename "$file").$(date +%Y%m%d%H%M%S).bak"
             if [ "$DRY_RUN" = false ]; then
@@ -228,7 +209,6 @@ apply_block() {
             fi
         fi
         
-        # Apply changes
         if [ "$DRY_RUN" = false ]; then
             cat "$content_file" > "$file"
             echo "Updated file: $file"
@@ -244,23 +224,24 @@ if [ "$VERBOSE" = true ]; then
     if [ "$DRY_RUN" = true ]; then
         echo "Running in DRY RUN mode (no changes will be applied)"
     fi
+    if [ -f "prompts/apply_prompt.txt" ]; then
+        echo "Applying with prompt:"
+        cat "prompts/apply_prompt.txt"
+        echo ""
+    fi
 fi
 
-# Extract code blocks from markdown
 extract_blocks
 
-# Check if any code blocks were found
 if [ ! -f "$FILES_FILE" ] || [ ! -s "$FILES_FILE" ]; then
     echo "No code blocks found in the markdown input."
     exit 0
 fi
 
-# Process each code block
 while IFS= read -r file; do
     apply_block "$file"
 done < "$FILES_FILE"
 
-# Show summary
 file_count=$(wc -l < "$FILES_FILE")
 if [ "$VERBOSE" = true ]; then
     echo ""

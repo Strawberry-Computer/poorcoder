@@ -11,7 +11,6 @@ RECENT_COMMITS=3
 FILES=""
 EXCLUDE=""
 FORMAT="md"
-INCLUDE_PROMPT=false
 CONVENTIONAL=false
 PROJECT_CONTEXT=false
 BRANCH_INFO=false
@@ -27,7 +26,6 @@ while [[ "$#" -gt 0 ]]; do
         --files=*) FILES="${1#*=}"; shift ;;
         --exclude=*) EXCLUDE="${1#*=}"; shift ;;
         --format=*) FORMAT="${1#*=}"; shift ;;
-        --prompt) INCLUDE_PROMPT=true; shift ;;
         --conventional) CONVENTIONAL=true; shift ;;
         --project-context) PROJECT_CONTEXT=true; shift ;;
         --branch-info) BRANCH_INFO=true; shift ;;
@@ -43,7 +41,6 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --files=<pattern>         Include only files matching pattern"
             echo "  --exclude=<pattern>       Exclude files matching pattern"
             echo "  --format=<format>         Output format (md, json, text) (default: md)"
-            echo "  --prompt                  Include commit message generation prompt"
             echo "  --conventional            Add conventional commit format guidance"
             echo "  --project-context         Include project name and description for context"
             echo "  --branch-info             Include current branch and related info"
@@ -91,7 +88,6 @@ if [ "$PROJECT_CONTEXT" = true ]; then
     project_name=$(get_project_name)
     project_description=""
     
-    # Try to find project description
     if [ -f "package.json" ]; then
         project_description=$(grep -m 1 '"description"' package.json | sed -E 's/.*"description"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
     elif [ -f "README.md" ]; then
@@ -188,17 +184,14 @@ if [ "$SHOW_DIFF" = true ]; then
         diff_title="Unstaged Changes (Diff)"
     fi
     
-    # Add file pattern if specified
     if [ -n "$FILES" ]; then
         diff_cmd="$diff_cmd -- $FILES"
     fi
     
-    # Add exclude pattern if specified
     if [ -n "$EXCLUDE" ]; then
         diff_cmd="$diff_cmd ':(exclude)$EXCLUDE'"
     fi
     
-    # Get the diff
     diff_output=$(eval $diff_cmd)
     
     if [ -n "$diff_output" ]; then
@@ -214,7 +207,6 @@ if [ "$SHOW_DIFF" = true ]; then
             json)
                 echo "  \"diff\": {"
                 echo "    \"title\": \"$diff_title\","
-                # Escape special characters for JSON
                 diff_json=$(echo "$diff_output" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
                 echo "    \"content\": \"$diff_json\""
                 echo "  },"
@@ -226,8 +218,6 @@ if [ "$SHOW_DIFF" = true ]; then
                 echo ""
                 ;;
         esac
-    elif [ "$VERBOSE" = true ]; then
-        echo "No changes found in the repository."
     fi
 fi
 
@@ -387,32 +377,25 @@ if [ $RECENT_COMMITS -gt 0 ]; then
     esac
 fi
 
-# Include commit message guidance if requested
-if [ "$INCLUDE_PROMPT" = true ]; then
-    # Get the prompt content from the file or use a default
-    prompt_content=""
-    if [ -f "prompts/commit_prompt.txt" ]; then
-        prompt_content=$(cat "prompts/commit_prompt.txt")
-    else
-        prompt_content="Based on the changes above, please generate an appropriate git commit message.\n\nFor better commit messages, consider:\n1. Keep the first line under 72 characters\n2. Use the imperative mood (\"add\" not \"added\")\n3. Describe what was changed and why"
-        
-        if [ "$CONVENTIONAL" = true ]; then
-            prompt_content="$prompt_content\n\nPlease use conventional commit format: type(scope): description\n- Types: feat, fix, docs, style, refactor, perf, test, chore\n- Example: \"feat(button): add disabled state handling\""
-        fi
-    fi
-    
+# Include default prompt if available
+if [ -f "prompts/git-context_prompt.txt" ]; then
     case $FORMAT in
         md)
             echo "## Commit Message Guidance"
             echo ""
-            echo "$prompt_content" | sed 's/\\n/\n/g'
+            cat "prompts/git-context_prompt.txt"
+            if [ "$CONVENTIONAL" = true ]; then
+                echo ""
+                echo "Please use conventional commit format: type(scope): description"
+                echo "- Types: feat, fix, docs, style, refactor, perf, test, chore"
+                echo "- Example: \"feat(button): add disabled state handling\""
+            fi
             echo ""
             ;;
         json)
             echo ","
             echo "  \"commit_guidance\": {"
-            # Escape special characters for JSON
-            guidance_json=$(echo "$prompt_content" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
+            guidance_json=$(cat "prompts/git-context_prompt.txt" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
             echo "    \"content\": \"$guidance_json\""
             if [ "$CONVENTIONAL" = true ]; then
                 echo "    \"conventional\": true"
@@ -422,7 +405,13 @@ if [ "$INCLUDE_PROMPT" = true ]; then
         text)
             echo "COMMIT MESSAGE GUIDANCE"
             echo "----------------------"
-            echo "$prompt_content" | sed 's/\\n/\n/g'
+            cat "prompts/git-context_prompt.txt"
+            if [ "$CONVENTIONAL" = true ]; then
+                echo ""
+                echo "Please use conventional commit format: type(scope): description"
+                echo "- Types: feat, fix, docs, style, refactor, perf, test, chore"
+                echo "- Example: \"feat(button): add disabled state handling\""
+            fi
             echo ""
             ;;
     esac
