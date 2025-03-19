@@ -224,11 +224,6 @@ if [ "$VERBOSE" = true ]; then
     if [ "$DRY_RUN" = true ]; then
         echo "Running in DRY RUN mode (no changes will be applied)"
     fi
-    if [ -f "prompts/apply_prompt.txt" ]; then
-        echo "Applying with prompt:"
-        cat "prompts/apply_prompt.txt"
-        echo ""
-    fi
 fi
 
 extract_blocks

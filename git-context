@@ -378,39 +378,36 @@ if [ $RECENT_COMMITS -gt 0 ]; then
 fi
 
 # Include default prompt if available
-if [ -f "prompts/git-context_prompt.txt" ]; then
+if [ -f "prompts/commit_prompt.txt" ]; then
     case $FORMAT in
         md)
             echo "## Commit Message Guidance"
             echo ""
-            cat "prompts/git-context_prompt.txt"
-            if [ "$CONVENTIONAL" = true ]; then
+            cat "prompts/commit_prompt.txt"
+            if [ "$CONVENTIONAL" = true ] && [ -f "prompts/conventional_commit.txt" ]; then
                 echo ""
-                echo "Please use conventional commit format: type(scope): description"
-                echo "- Types: feat, fix, docs, style, refactor, perf, test, chore"
-                echo "- Example: \"feat(button): add disabled state handling\""
+                cat "prompts/conventional_commit.txt"
             fi
             echo ""
             ;;
         json)
             echo ","
             echo "  \"commit_guidance\": {"
-            guidance_json=$(cat "prompts/git-context_prompt.txt" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
+            guidance_json=$(cat "prompts/commit_prompt.txt" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
             echo "    \"content\": \"$guidance_json\""
-            if [ "$CONVENTIONAL" = true ]; then
-                echo "    \"conventional\": true"
+            if [ "$CONVENTIONAL" = true ] && [ -f "prompts/conventional_commit.txt" ]; then
+                conventional_json=$(cat "prompts/conventional_commit.txt" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
+                echo "    ,\"conventional\": \"$conventional_json\""
             fi
             echo "  }"
             ;;
         text)
             echo "COMMIT MESSAGE GUIDANCE"
             echo "----------------------"
-            cat "prompts/git-context_prompt.txt"
-            if [ "$CONVENTIONAL" = true ]; then
+            cat "prompts/commit_prompt.txt"
+            if [ "$CONVENTIONAL" = true ] && [ -f "prompts/conventional_commit.txt" ]; then
                 echo ""
-                echo "Please use conventional commit format: type(scope): description"
-                echo "- Types: feat, fix, docs, style, refactor, perf, test, chore"
-                echo "- Example: \"feat(button): add disabled state handling\""
+                cat "prompts/conventional_commit.txt"
             fi
             echo ""
             ;;
