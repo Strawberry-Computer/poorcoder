@@ -2,20 +2,6 @@
 
 # test_utils.sh - Utilities for testing the context script (TAP-compliant)
 
-# Get the directory where the test_utils.sh script is located
-TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Initialize test counters
-TESTS_PASSED=0
-TESTS_FAILED=0
-TEST_NUMBER_INTERNAL=0
-
-# Function to update test result counts
-update_test_results() {
-    echo "PASSED:$TESTS_PASSED" > "$TEST_DIR/test_results.txt"
-    echo "FAILED:$TESTS_FAILED" >> "$TEST_DIR/test_results.txt"
-}
-
 # Function to run a test and output TAP-compliant results
 # Usage: run_test "test_description" "command_to_run"
 run_test() {
@@ -23,11 +9,11 @@ run_test() {
     local command="$2"
     local skip_reason="${3:-}"
     
-    TEST_NUMBER_INTERNAL=$((TEST_NUMBER_INTERNAL + 1))
+    local test_number=$((test_number + 1))
     
     # Skip test if reason provided
     if [ -n "$skip_reason" ]; then
-        echo "ok $TEST_NUMBER_INTERNAL # SKIP $description - $skip_reason"
+        echo "ok $test_number # SKIP $description - $skip_reason"
         return 0
     fi
     
@@ -44,10 +30,9 @@ run_test() {
     
     # Handle the result
     if [ $status -eq 0 ]; then
-        echo "ok $TEST_NUMBER_INTERNAL - $description"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
+        echo "ok $test_number - $description"
     else
-        echo "not ok $TEST_NUMBER_INTERNAL - $description"
+        echo "not ok $test_number - $description"
         echo "# Command: $command"
         
         if [ -n "$output" ]; then
@@ -60,12 +45,12 @@ run_test() {
             echo "$error" | sed 's/^/#  /'
         fi
         
-        TESTS_FAILED=$((TESTS_FAILED + 1))
+        # Save the failure status for the exit code
+        failures=$((failures + 1))
     fi
     
     # Clean up temporary files
     rm -f "$output_file" "$error_file"
-    update_test_results
     
     return $status
 }
@@ -98,18 +83,15 @@ assert() {
     local condition="$1"
     local description="$2"
     
-    TEST_NUMBER_INTERNAL=$((TEST_NUMBER_INTERNAL + 1))
+    local test_number=$((test_number + 1))
     
     if eval "$condition"; then
-        echo "ok $TEST_NUMBER_INTERNAL - $description"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
+        echo "ok $test_number - $description"
     else
-        echo "not ok $TEST_NUMBER_INTERNAL - $description"
+        echo "not ok $test_number - $description"
         echo "# Failed condition: $condition"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
+        failures=$((failures + 1))
     fi
-    
-    update_test_results
 }
 
 # Function to create a test file with a specific size
@@ -137,19 +119,3 @@ create_test_file() {
         echo "# Warning: Created file size ($final_size) doesn't match requested size ($size_bytes)" >&2
     fi
 }
-
-# Print TAP plan for individual test files
-plan() {
-    local count="$1"
-    echo "1..$count"
-}
-
-# Export functions and variables for use in subshells
-export -f run_test
-export -f create_test_dir
-export -f cleanup_test_dir
-export -f tap_diag
-export -f assert
-export -f create_test_file
-export -f plan
-export -f update_test_results

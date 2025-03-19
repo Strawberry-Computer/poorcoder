@@ -6,9 +6,6 @@
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$TEST_DIR/.." && pwd)"
 
-# Source test utilities
-source "$TEST_DIR/test_utils.sh"
-
 # Initialize counters
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -22,14 +19,7 @@ test_files=("$TEST_DIR"/unit/test_*.sh)
 total_test_files=${#test_files[@]}
 echo "1..$total_test_files"
 
-# Create or clear the test results file
-echo "PASSED:0" > "$TEST_DIR/test_results.txt"
-echo "FAILED:0" >> "$TEST_DIR/test_results.txt"
-
-# Make test utilities executable
-chmod +x "$TEST_DIR/test_utils.sh"
-
-# Make test scripts executable
+# Make all test scripts executable
 for test_file in "${test_files[@]}"; do
     chmod +x "$test_file"
 done
