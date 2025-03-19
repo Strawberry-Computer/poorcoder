@@ -9,3 +9,5 @@ For better commit messages, consider:
 Your commit message should describe what was changed and why.
 
 If the change is related to a specific issue or feature request, please mention it.
+
+IMPORTANT: Don't output any other text besides desired commit message.

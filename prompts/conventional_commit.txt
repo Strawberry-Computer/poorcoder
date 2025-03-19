@@ -22,3 +22,5 @@ Examples:
 
 For more complex changes, you can add a blank line after the first line, 
 followed by a more detailed description.
+
+IMPORTANT: Don't output ant other text besides generated commit message.
