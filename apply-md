@@ -6,75 +6,33 @@
 # Default values
 DRY_RUN=false
 CREATE_MISSING=false
-BACKUP=false
-BACKUP_DIR="./.backups"
-FILE_MARKER='^```[a-z]+ (.+)$'
-SKIP_UNCHANGED=false
 VERBOSE=false
-CONFIRM=false
-ONLY_FILES=""
-IGNORE_FILES=""
-
-# Function to get git repository root
-get_git_root() {
-    git rev-parse --show-toplevel 2>/dev/null
-}
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --dry-run) DRY_RUN=true; shift ;;
         --create-missing) CREATE_MISSING=true; shift ;;
-        --backup) BACKUP=true; shift ;;
-        --backup-dir=*) BACKUP_DIR="${1#*=}"; shift ;;
-        --file-marker=*) FILE_MARKER="${1#*=}"; shift ;;
-        --skip-unchanged) SKIP_UNCHANGED=true; shift ;;
         --verbose) VERBOSE=true; shift ;;
-        --confirm) CONFIRM=true; shift ;;
-        --only-files=*) ONLY_FILES="${1#*=}"; shift ;;
-        --ignore-files=*) IGNORE_FILES="${1#*=}"; shift ;;
         --help|-h)
             echo "Usage: ./apply-md [options]"
             echo ""
             echo "Options:"
-            echo "  --dry-run                 Preview changes without applying them"
-            echo "  --create-missing          Create files that don't exist"
-            echo "  --backup                  Create backup files before applying changes"
-            echo "  --backup-dir=<dir>        Directory for backups (default: ./.backups)"
-            echo "  --file-marker=<regex>     Regex to identify target files from markdown"
-            echo "  --skip-unchanged          Skip files with no changes"
-            echo "  --verbose                 Show detailed output about changes"
-            echo "  --confirm                 Prompt for confirmation before applying each change"
-            echo "  --only-files=<pattern>    Only apply changes to files matching pattern"
-            echo "  --ignore-files=<pattern>  Ignore changes for files matching pattern"
-            echo "  --help, -h                Show this help message"
+            echo "  --dry-run         Preview changes without applying them"
+            echo "  --create-missing  Create files that don't exist"
+            echo "  --verbose         Show detailed output about changes"
+            echo "  --help, -h        Show this help message"
             exit 0
             ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
 done
 
-# Get git root if available
-GIT_ROOT=$(get_git_root)
-if [ -z "$GIT_ROOT" ] && [ "$VERBOSE" = true ]; then
-    echo "Warning: Not in a git repository, absolute paths will be treated as system paths"
-fi
-
-# Create backup directory if needed
-if [ "$BACKUP" = true ] && [ ! -d "$BACKUP_DIR" ]; then
-    if [ "$DRY_RUN" = false ]; then
-        mkdir -p "$BACKUP_DIR"
-    elif [ "$VERBOSE" = true ]; then
-        echo "[DRY RUN] Would create backup directory: $BACKUP_DIR"
-    fi
-fi
-
 # Read markdown content from stdin
 MARKDOWN=$(cat)
 
 # Create temporary directory
 TEMP_DIR=$(mktemp -d)
-BLOCKS_FILE="$TEMP_DIR/blocks.txt"
 FILES_FILE="$TEMP_DIR/files.txt"
 
 # Function to cleanup temporary files
@@ -82,18 +40,6 @@ cleanup() {
     rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
-
-# Function to normalize path relative to git root
-normalize_path() {
-    local path="$1"
-    if [ -n "$GIT_ROOT" ] && [[ "$path" == /* ]]; then
-        # Remove leading slash and resolve relative to git root
-        local rel_path="${path#/}"
-        echo "$GIT_ROOT/$rel_path"
-    else
-        echo "$path"
-    fi
-}
 
 # Extract code blocks and their file names
 extract_blocks() {
@@ -104,13 +50,12 @@ extract_blocks() {
     echo "$MARKDOWN" | while IFS= read -r line; do
         if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]+(.+) ]]; then
             current_file="${BASH_REMATCH[2]}"
-            normalized_file=$(normalize_path "$current_file")
             in_block=true
             temp_file="$TEMP_DIR/$current_file"
             mkdir -p "$(dirname "$temp_file")"
             : > "$temp_file"  # Create empty file
             if [ "$VERBOSE" = true ]; then
-                echo "Starting code block for file: $current_file (normalized: $normalized_file)"
+                echo "Starting code block for file: $current_file"
             fi
             continue
         fi
@@ -118,9 +63,8 @@ extract_blocks() {
         if [[ "$line" =~ ^[[:space:]]*\`\`\`[[:space:]]*$ ]]; then
             if [ -n "$current_file" ] && [ "$in_block" = true ]; then
                 echo "$current_file" >> "$FILES_FILE"
-                current_file_formatted=$(echo "$current_file" | sed 's/^\.\///')
                 if [ "$VERBOSE" = true ]; then
-                    echo "Completed code block for file: $current_file_formatted"
+                    echo "Completed code block for file: $current_file"
                 fi
             fi
             in_block=false
@@ -139,30 +83,11 @@ extract_blocks() {
 apply_block() {
     local file="$1"
     local content_file="$TEMP_DIR/$file"
-    local skipped=false
-    
-    if [ -n "$IGNORE_FILES" ] && [[ "$file" == $IGNORE_FILES ]]; then
-        if [ "$VERBOSE" = true ]; then
-            echo "Skipping ignored file: $file"
-        fi
-        return
-    fi
-    
-    if [ -n "$ONLY_FILES" ] && [[ "$file" != $ONLY_FILES ]]; then
-        if [ "$VERBOSE" = true ]; then
-            echo "Skipping file not matching include pattern: $file"
-        fi
-        return
-    fi
     
     if [ ! -f "$content_file" ]; then
         echo "Error: Content file not found for $file"
         return
     fi
-    
-    # Normalize file path
-    local normalized_file=$(normalize_path "$file")
-    file="$normalized_file"
     
     if [ ! -f "$file" ]; then
         if [ "$CREATE_MISSING" = true ]; then
@@ -170,13 +95,13 @@ apply_block() {
                 mkdir -p "$(dirname "$file")"
                 cat "$content_file" > "$file"
                 echo "Created file: $file"
-            elif [ "$VERBOSE" = true ]; then
-                echo "[DRY RUN] Would create file: $file"
-                echo "---"
-                cat "$content_file"
-                echo "---"
             else
                 echo "[DRY RUN] Would create file: $file"
+                if [ "$VERBOSE" = true ]; then
+                    echo "---"
+                    cat "$content_file"
+                    echo "---"
+                fi
             fi
         else
             echo "Warning: File does not exist and --create-missing not specified: $file"
@@ -184,61 +109,28 @@ apply_block() {
         return
     fi
     
-    if [ "$SKIP_UNCHANGED" = true ]; then
-        diff -q "$file" "$content_file" > /dev/null
-        if [ $? -eq 0 ]; then
-            if [ "$VERBOSE" = true ]; then
-                echo "Skipping unchanged file: $file"
-            fi
-            skipped=true
+    # Check for changes
+    diff -q "$file" "$content_file" > /dev/null
+    if [ $? -eq 0 ]; then
+        if [ "$VERBOSE" = true ]; then
+            echo "No changes needed for: $file"
         fi
+        return
     fi
     
-    if [ "$skipped" = false ]; then
-        local changes=$(diff -u "$file" "$content_file")
-        if [ -z "$changes" ]; then
-            if [ "$VERBOSE" = true ]; then
-                echo "No changes needed for: $file"
-            fi
-            return
-        fi
-        
-        if [ "$VERBOSE" = true ]; then
-            echo "Changes for $file:"
-            echo "$changes"
-            echo ""
-        else
-            echo "Modifying: $file"
-        fi
-        
-        if [ "$CONFIRM" = true ]; then
-            read -p "Apply changes to $file? (y/n) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                echo "Skipping file: $file"
-                return
-            fi
-        fi
-        
-        if [ "$BACKUP" = true ]; then
-            local backup_file="$BACKUP_DIR/$(basename "$file").$(date +%Y%m%d%H%M%S).bak"
-            if [ "$DRY_RUN" = false ]; then
-                mkdir -p "$(dirname "$backup_file")"
-                cp "$file" "$backup_file"
-                if [ "$VERBOSE" = true ]; then
-                    echo "Created backup: $backup_file"
-                fi
-            elif [ "$VERBOSE" = true ]; then
-                echo "[DRY RUN] Would create backup: $backup_file"
-            fi
-        fi
-        
-        if [ "$DRY_RUN" = false ]; then
-            cat "$content_file" > "$file"
-            echo "Updated file: $file"
-        else
-            echo "[DRY RUN] Would update file: $file"
-        fi
+    if [ "$VERBOSE" = true ]; then
+        echo "Changes for $file:"
+        diff -u "$file" "$content_file"
+        echo ""
+    else
+        echo "Modifying: $file"
+    fi
+    
+    if [ "$DRY_RUN" = false ]; then
+        cat "$content_file" > "$file"
+        echo "Updated file: $file"
+    else
+        echo "[DRY RUN] Would update file: $file"
     fi
 }
 
@@ -247,9 +139,6 @@ if [ "$VERBOSE" = true ]; then
     echo "Starting markdown code application..."
     if [ "$DRY_RUN" = true ]; then
         echo "Running in DRY RUN mode (no changes will be applied)"
-    fi
-    if [ -n "$GIT_ROOT" ]; then
-        echo "Git repository root detected at: $GIT_ROOT"
     fi
 fi
 
