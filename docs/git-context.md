@@ -1,40 +1,32 @@
-# `git-context` - Git Context Generator
+# `git-context` - Minimalist Git Context Generator
 
 ## Overview
 
-The `git-context` tool generates git-related context specifically to help LLMs create meaningful commit messages.
+The `git-context` tool generates essential git-related context to help LLMs create meaningful commit messages. This simplified version focuses on providing only the most useful information for commit message generation.
 
 ## Usage
 
 ```bash
-./git-context --diff --recent-commits=2 --prompt --conventional > commit_context.txt
+./git-context [options] > commit_context.txt
 ```
 
 ## Arguments
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--diff` | Show uncommitted changes | True |
-| `--no-diff` | Don't show uncommitted changes | False |
-| `--staged` | Show only staged changes | False |
-| `--unstaged` | Show only unstaged changes | False |
 | `--recent-commits=<num>` | Show most recent N commits for context | 3 |
-| `--files=<pattern>` | Include only files matching pattern | None |
-| `--exclude=<pattern>` | Exclude files matching pattern | None |
-| `--format=<format>` | Output format (md, json, text) | "md" |
-| `--prompt` | Include commit message generation prompt | False |
-| `--conventional` | Add conventional commit format guidance | False |
-| `--project-context` | Include project name and description for context | False |
-| `--branch-info` | Include current branch and related info | False |
+| `--prompt=<file>` | Use custom commit message prompt from file | "prompts/commit_prompt.txt" |
+| `--no-prompt` | Don't include commit message prompt | False |
 
 ## Output
 
-The tool outputs git context information, which typically includes:
+The tool outputs git context information in markdown format, which includes:
 
-1. Git diff of uncommitted/staged changes
-2. Information about files changed (stats)
-3. Recent commit messages for style reference
-4. Optional prompt to guide the LLM in generating a good commit message
+1. Git status summary
+2. Git diff of uncommitted changes against HEAD
+3. List of files changed with their status
+4. Recent commit messages for style reference
+5. Commit message guidance from prompts/commit_prompt.txt
 
 ## Examples
 
@@ -48,48 +40,56 @@ Generate context for a commit message:
 
 ### Conventional Commits
 
-Include guidance for conventional commit format:
+Use the conventional commits format guidance included in the repository:
 
 ```bash
-./git-context --prompt --conventional > commit_context.txt
+./git-context --prompt=prompts/conventional_commit.txt > commit_context.txt
 ```
 
-### With Project Context
+This uses the pre-defined conventional commit format guidance from the prompts directory.
 
-Include project information for better context:
+### Without Prompt
+
+Generate context without the commit message guidance:
 
 ```bash
-./git-context --project-context --branch-info > commit_context.txt
+./git-context --no-prompt > commit_context.txt
 ```
 
-### Staged Changes Only
+### Adjust Number of Recent Commits
 
-Only include changes that have been staged:
-
-```bash
-./git-context --staged --prompt > commit_context.txt
-```
-
-### JSON Output
-
-Generate context in JSON format:
+Show more or fewer recent commits:
 
 ```bash
-./git-context --format=json > commit_context.json
+./git-context --recent-commits=5 > commit_context.txt
 ```
 
 ## Customization
 
 The commit message prompt template is stored in `prompts/commit_prompt.txt` and can be customized to your project's needs.
 
-If the `--conventional` flag is used, the tool will also include guidance from `prompts/conventional_commit.txt`.
+For conventional commits or other specialized formats, create a custom prompt file and specify it with the `--prompt=` option.
 
 ## Workflow Integration
 
 Typical workflow:
 
 1. Make changes to your code
-2. Stage changes with `git add`
-3. Run `./git-context --staged --prompt > commit_context.txt`
-4. Send commit_context.txt to an LLM to generate a commit message
-5. Use the generated message with `git commit -m "generated message"`
+2. Run `./git-context > commit_context.txt`
+3. Send commit_context.txt to an LLM to generate a commit message
+4. Use the generated message with `git commit -m "generated message"`
+
+## Pipeline Examples
+
+```bash
+# Generate commit message and use it directly (using an LLM CLI tool)
+git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)"
+
+# Generate commit message but edit it before committing
+git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
+
+# Generate a conventional commit message with editing option
+git commit -am "$(./git-context --prompt=prompts/conventional_commit.txt | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
+```
+
+The `-e` or `--edit` option opens the commit message in your default editor, allowing you to review, edit, or cancel the commit if needed.
