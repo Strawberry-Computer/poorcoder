@@ -1,49 +1,26 @@
 #!/bin/bash
 
-# git-context - Git Context Generator for Commit Messages
-# Generates git-related context to help LLMs create meaningful commit messages
+# simplified-git-context - Minimalist Git Context Generator for Commit Messages
+# Generates essential git-related context to help LLMs create meaningful commit messages
 
 # Default values
-SHOW_DIFF=true
-STAGED_ONLY=false
-UNSTAGED_ONLY=false
 RECENT_COMMITS=3
-FILES=""
-EXCLUDE=""
-FORMAT="md"
-CONVENTIONAL=false
-PROJECT_CONTEXT=false
-BRANCH_INFO=false
+PROMPT_FILE="prompts/commit_prompt.txt"
+INCLUDE_PROMPT=true
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --diff) SHOW_DIFF=true; shift ;;
-        --no-diff) SHOW_DIFF=false; shift ;;
-        --staged) STAGED_ONLY=true; shift ;;
-        --unstaged) UNSTAGED_ONLY=true; shift ;;
         --recent-commits=*) RECENT_COMMITS="${1#*=}"; shift ;;
-        --files=*) FILES="${1#*=}"; shift ;;
-        --exclude=*) EXCLUDE="${1#*=}"; shift ;;
-        --format=*) FORMAT="${1#*=}"; shift ;;
-        --conventional) CONVENTIONAL=true; shift ;;
-        --project-context) PROJECT_CONTEXT=true; shift ;;
-        --branch-info) BRANCH_INFO=true; shift ;;
+        --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
+        --no-prompt) INCLUDE_PROMPT=false; shift ;;
         --help|-h)
             echo "Usage: ./git-context [options]"
             echo ""
             echo "Options:"
-            echo "  --diff                    Show uncommitted changes (default: true)"
-            echo "  --no-diff                 Don't show uncommitted changes"
-            echo "  --staged                  Show only staged changes"
-            echo "  --unstaged                Show only unstaged changes"
             echo "  --recent-commits=<num>    Show most recent N commits for context (default: 3)"
-            echo "  --files=<pattern>         Include only files matching pattern"
-            echo "  --exclude=<pattern>       Exclude files matching pattern"
-            echo "  --format=<format>         Output format (md, json, text) (default: md)"
-            echo "  --conventional            Add conventional commit format guidance"
-            echo "  --project-context         Include project name and description for context"
-            echo "  --branch-info             Include current branch and related info"
+            echo "  --prompt=<file>           Use custom commit message prompt from file (default: prompts/commit_prompt.txt)"
+            echo "  --no-prompt               Don't include commit message prompt"
             echo "  --help, -h                Show this help message"
             exit 0
             ;;
@@ -57,366 +34,83 @@ if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     exit 1
 fi
 
-# Get project name from the repository
-get_project_name() {
-    local remote_url=$(git config --get remote.origin.url)
-    if [ -n "$remote_url" ]; then
-        echo "$remote_url" | sed -E 's/.*\/([^\/]+)(\.git)?$/\1/'
-    else
-        basename "$(git rev-parse --show-toplevel)"
-    fi
-}
+# Begin output
+echo "# Git Context for Commit Message Generation"
+echo ""
 
-# Begin output based on format
-case $FORMAT in
-    md)
-        echo "# Git Context for Commit Message Generation"
-        echo ""
-        ;;
-    json)
-        echo "{"
-        ;;
-    text)
-        echo "GIT CONTEXT FOR COMMIT MESSAGE GENERATION"
-        echo "========================================"
-        echo ""
-        ;;
-esac
-
-# Include project context if requested
-if [ "$PROJECT_CONTEXT" = true ]; then
-    project_name=$(get_project_name)
-    project_description=""
-    
-    if [ -f "package.json" ]; then
-        project_description=$(grep -m 1 '"description"' package.json | sed -E 's/.*"description"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
-    elif [ -f "README.md" ]; then
-        project_description=$(grep -A 2 "^#" README.md | head -1)
-    fi
-    
-    case $FORMAT in
-        md)
-            echo "## Project Information"
-            echo ""
-            echo "Project: **$project_name**"
-            if [ -n "$project_description" ]; then
-                echo ""
-                echo "Description: $project_description"
-            fi
-            echo ""
-            ;;
-        json)
-            echo "  \"project\": {"
-            echo "    \"name\": \"$project_name\","
-            if [ -n "$project_description" ]; then
-                echo "    \"description\": \"$(echo "$project_description" | sed 's/"/\\"/g')\""
-            else
-                echo "    \"description\": \"\""
-            fi
-            echo "  },"
-            ;;
-        text)
-            echo "PROJECT INFORMATION"
-            echo "------------------"
-            echo "Project: $project_name"
-            if [ -n "$project_description" ]; then
-                echo "Description: $project_description"
-            fi
-            echo ""
-            ;;
-    esac
+# Show git status
+status_output=$(git status --porcelain)
+if [ -n "$status_output" ]; then
+    echo "## Git Status"
+    echo ""
+    echo '```'
+    git status -s
+    echo '```'
+    echo ""
 fi
 
-# Show branch information if requested
-if [ "$BRANCH_INFO" = true ]; then
-    current_branch=$(git branch --show-current)
-    upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "None")
-    tracking_status=$(git status -sb | head -n 1)
-    
-    case $FORMAT in
-        md)
-            echo "## Branch Information"
-            echo ""
-            echo "Current branch: **$current_branch**"
-            echo ""
-            if [ "$upstream" != "None" ]; then
-                echo "Tracking: $upstream"
-                echo ""
-                echo "Status: $tracking_status"
-                echo ""
-            fi
-            ;;
-        json)
-            echo "  \"branch\": {"
-            echo "    \"name\": \"$current_branch\","
-            if [ "$upstream" != "None" ]; then
-                echo "    \"upstream\": \"$upstream\","
-                echo "    \"status\": \"$(echo "$tracking_status" | sed 's/"/\\"/g')\""
-            else
-                echo "    \"upstream\": null,"
-                echo "    \"status\": null"
-            fi
-            echo "  },"
-            ;;
-        text)
-            echo "BRANCH INFORMATION"
-            echo "-----------------"
-            echo "Current branch: $current_branch"
-            if [ "$upstream" != "None" ]; then
-                echo "Tracking: $upstream"
-                echo "Status: $tracking_status"
-            fi
-            echo ""
-            ;;
-    esac
-fi
-
-# Show git diff if requested
-if [ "$SHOW_DIFF" = true ]; then
-    diff_cmd="git diff"
-    diff_title="Current Changes (Diff)"
-    
-    if [ "$STAGED_ONLY" = true ]; then
-        diff_cmd="git diff --staged"
-        diff_title="Staged Changes (Diff)"
-    elif [ "$UNSTAGED_ONLY" = true ]; then
-        diff_cmd="git diff"
-        diff_title="Unstaged Changes (Diff)"
-    fi
-    
-    if [ -n "$FILES" ]; then
-        diff_cmd="$diff_cmd -- $FILES"
-    fi
-    
-    if [ -n "$EXCLUDE" ]; then
-        diff_cmd="$diff_cmd ':(exclude)$EXCLUDE'"
-    fi
-    
-    diff_output=$(eval $diff_cmd)
-    
-    if [ -n "$diff_output" ]; then
-        case $FORMAT in
-            md)
-                echo "## $diff_title"
-                echo ""
-                echo "\`\`\`diff"
-                echo "$diff_output"
-                echo "\`\`\`"
-                echo ""
-                ;;
-            json)
-                echo "  \"diff\": {"
-                echo "    \"title\": \"$diff_title\","
-                diff_json=$(echo "$diff_output" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-                echo "    \"content\": \"$diff_json\""
-                echo "  },"
-                ;;
-            text)
-                echo "$diff_title"
-                echo "-------------------"
-                echo "$diff_output"
-                echo ""
-                ;;
-        esac
-    fi
+# Show changes using git diff HEAD
+diff_output=$(git diff HEAD)
+if [ -n "$diff_output" ]; then
+    echo "## Current Changes (Diff)"
+    echo ""
+    echo '```diff'
+    echo "$diff_output"
+    echo '```'
+    echo ""
 fi
 
 # Show summary of files changed
-files_changed=$(git diff --name-status)
-if [ "$STAGED_ONLY" = true ]; then
-    files_changed=$(git diff --staged --name-status)
-fi
-
-if [ -n "$files_changed" ]; then
-    case $FORMAT in
-        md)
-            echo "## Files Changed"
-            echo ""
-            echo "$files_changed" | while read -r status file; do
-                case "$status" in
-                    M) echo "- $file (modified)" ;;
-                    A) echo "- $file (added)" ;;
-                    D) echo "- $file (deleted)" ;;
-                    R*) 
-                        orig=$(echo "$file" | cut -f2)
-                        new=$(echo "$file" | cut -f1)
-                        echo "- $orig -> $new (renamed)" 
-                        ;;
-                    C*) 
-                        orig=$(echo "$file" | cut -f2)
-                        new=$(echo "$file" | cut -f1)
-                        echo "- $orig -> $new (copied)" 
-                        ;;
-                    *) echo "- $file ($status)" ;;
-                esac
-            done
-            echo ""
-            ;;
-        json)
-            echo "  \"files_changed\": ["
-            first=true
-            echo "$files_changed" | while read -r status file; do
-                if [ "$first" = true ]; then
-                    first=false
-                else
-                    echo ","
-                fi
-                case "$status" in
-                    M) 
-                        echo "    {"
-                        echo "      \"file\": \"$file\","
-                        echo "      \"status\": \"modified\""
-                        echo -n "    }"
-                        ;;
-                    A) 
-                        echo "    {"
-                        echo "      \"file\": \"$file\","
-                        echo "      \"status\": \"added\""
-                        echo -n "    }"
-                        ;;
-                    D) 
-                        echo "    {"
-                        echo "      \"file\": \"$file\","
-                        echo "      \"status\": \"deleted\""
-                        echo -n "    }"
-                        ;;
-                    R*) 
-                        orig=$(echo "$file" | cut -f2)
-                        new=$(echo "$file" | cut -f1)
-                        echo "    {"
-                        echo "      \"file\": \"$orig\","
-                        echo "      \"new_file\": \"$new\","
-                        echo "      \"status\": \"renamed\""
-                        echo -n "    }"
-                        ;;
-                    C*) 
-                        orig=$(echo "$file" | cut -f2)
-                        new=$(echo "$file" | cut -f1)
-                        echo "    {"
-                        echo "      \"file\": \"$orig\","
-                        echo "      \"new_file\": \"$new\","
-                        echo "      \"status\": \"copied\""
-                        echo -n "    }"
-                        ;;
-                    *) 
-                        echo "    {"
-                        echo "      \"file\": \"$file\","
-                        echo "      \"status\": \"$status\""
-                        echo -n "    }"
-                        ;;
-                esac
-            done
-            echo ""
-            echo "  ],"
-            ;;
-        text)
-            echo "FILES CHANGED"
-            echo "------------"
-            echo "$files_changed" | while read -r status file; do
-                case "$status" in
-                    M) echo "* $file (modified)" ;;
-                    A) echo "* $file (added)" ;;
-                    D) echo "* $file (deleted)" ;;
-                    R*) 
-                        orig=$(echo "$file" | cut -f2)
-                        new=$(echo "$file" | cut -f1)
-                        echo "* $orig -> $new (renamed)" 
-                        ;;
-                    C*) 
-                        orig=$(echo "$file" | cut -f2)
-                        new=$(echo "$file" | cut -f1)
-                        echo "* $orig -> $new (copied)" 
-                        ;;
-                    *) echo "* $file ($status)" ;;
-                esac
-            done
-            echo ""
-            ;;
-    esac
+if [ -n "$status_output" ]; then
+    echo "## Files Changed"
+    echo ""
+    
+    echo "$status_output" | while read -r line; do
+        # Extract the status code (first two characters)
+        status_code="${line:0:2}"
+        # Extract the filename (everything after the status code and whitespace)
+        file=$(echo "$line" | sed 's/^.. *//')
+        status_desc=""
+        
+        # Determine the status description
+        case "$status_code" in
+            "M "|" M") status_desc="modified" ;;
+            "A ") status_desc="added" ;;
+            "D ") status_desc="deleted" ;;
+            "R ") status_desc="renamed" ;;
+            "C ") status_desc="copied" ;;
+            "??") status_desc="untracked" ;;
+            *) status_desc="$status_code" ;;
+        esac
+        
+        echo "- $file ($status_desc)"
+    done
+    echo ""
 fi
 
 # Show recent commits
 if [ $RECENT_COMMITS -gt 0 ]; then
-    case $FORMAT in
-        md)
-            echo "## Recent Commits (for reference)"
-            echo ""
-            git log -n $RECENT_COMMITS --pretty=format:"- %h: %s (%an, %ar)" | while read line; do
-                echo "$line"
-            done
-            echo ""
-            echo ""
-            ;;
-        json)
-            echo "  \"recent_commits\": ["
-            first=true
-            git log -n $RECENT_COMMITS --pretty=format:"%h|%s|%an|%ar" | while IFS="|" read -r hash message author date; do
-                if [ "$first" = true ]; then
-                    first=false
-                else
-                    echo ","
-                fi
-                echo "    {"
-                echo "      \"hash\": \"$hash\","
-                echo "      \"message\": \"$(echo "$message" | sed 's/"/\\"/g')\","
-                echo "      \"author\": \"$(echo "$author" | sed 's/"/\\"/g')\","
-                echo "      \"date\": \"$date\""
-                echo -n "    }"
-            done
-            echo ""
-            echo "  ]"
-            ;;
-        text)
-            echo "RECENT COMMITS"
-            echo "--------------"
-            git log -n $RECENT_COMMITS --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
-                echo "$line"
-            done
-            echo ""
-            ;;
-    esac
+    echo "## Recent Commits (for reference)"
+    echo ""
+    git log -n $RECENT_COMMITS --pretty=format:"- %h: %s (%an, %ar)" | while read line; do
+        echo "$line"
+    done
+    echo ""
 fi
 
-# Include default prompt if available
-if [ -f "prompts/commit_prompt.txt" ]; then
-    case $FORMAT in
-        md)
-            echo "## Commit Message Guidance"
-            echo ""
-            cat "prompts/commit_prompt.txt"
-            if [ "$CONVENTIONAL" = true ] && [ -f "prompts/conventional_commit.txt" ]; then
-                echo ""
-                cat "prompts/conventional_commit.txt"
-            fi
-            echo ""
-            ;;
-        json)
-            echo ","
-            echo "  \"commit_guidance\": {"
-            guidance_json=$(cat "prompts/commit_prompt.txt" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
-            echo "    \"content\": \"$guidance_json\""
-            if [ "$CONVENTIONAL" = true ] && [ -f "prompts/conventional_commit.txt" ]; then
-                conventional_json=$(cat "prompts/conventional_commit.txt" | sed 's/"/\\"/g' | sed 's/\\n/\\\\n/g')
-                echo "    ,\"conventional\": \"$conventional_json\""
-            fi
-            echo "  }"
-            ;;
-        text)
-            echo "COMMIT MESSAGE GUIDANCE"
-            echo "----------------------"
-            cat "prompts/commit_prompt.txt"
-            if [ "$CONVENTIONAL" = true ] && [ -f "prompts/conventional_commit.txt" ]; then
-                echo ""
-                cat "prompts/conventional_commit.txt"
-            fi
-            echo ""
-            ;;
-    esac
-fi
-
-# Close JSON if needed
-if [ "$FORMAT" = "json" ]; then
-    echo "}"
+# Include commit message prompt
+if [ "$INCLUDE_PROMPT" = true ]; then
+    echo "## Commit Message Guidance"
+    echo ""
+    
+    # Check if prompt file exists
+    if [ -f "$PROMPT_FILE" ]; then
+        cat "$PROMPT_FILE"
+    else
+        echo "Please write a clear and concise commit message that explains WHAT changes were made and WHY they were necessary."
+        echo "Focus on the purpose and impact of the changes, not just the technical details."
+    fi
+    echo ""
 fi
 
 exit 0
