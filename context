@@ -1,57 +1,52 @@
 #!/bin/bash
 
-# context - Code Context Generator
+# context - Simplified Code Context Generator
 # Generates contextual information from a codebase to send to an LLM
 
 # Default values
-FILES=()
-EXCLUDE=""
+INCLUDE=()
+EXCLUDE=()
 MAX_SIZE="500KB"
-DEPTH=1
 INCLUDE_GIT=false
-GIT_DEPTH=3
-SUMMARY=false
 SHOW_FILE_SIZES=false
-TRUNCATE_LARGE=""
-INCLUDE_LS_FILES=true
-LS_FILES_LIMIT=100
+SHOW_LS_FILES=true
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --files=*) FILES+=("${1#*=}"); shift ;;
-        --exclude=*) EXCLUDE="${1#*=}"; shift ;;
+        --include=*) INCLUDE+=("${1#*=}"); shift ;;
+        --exclude=*) EXCLUDE+=("${1#*=}"); shift ;;
         --max-size=*) MAX_SIZE="${1#*=}"; shift ;;
-        --depth=*) DEPTH="${1#*=}"; shift ;;
-        --include-git) INCLUDE_GIT=true; shift ;;
-        --git-depth=*) GIT_DEPTH="${1#*=}"; shift ;;
-        --summary) SUMMARY=true; shift ;;
-        --show-file-sizes) SHOW_FILE_SIZES=true; shift ;;
-        --truncate-large=*) TRUNCATE_LARGE="${1#*=}"; shift ;;
-        --ls-files) INCLUDE_LS_FILES=true; shift ;;
-        --no-ls-files) INCLUDE_LS_FILES=false; shift ;;
-        --ls-files-limit=*) LS_FILES_LIMIT="${1#*=}"; shift ;;
+        --git) INCLUDE_GIT=true; shift ;;
+        --show-sizes) SHOW_FILE_SIZES=true; shift ;;
+        --no-ls-files) SHOW_LS_FILES=false; shift ;;
         --help|-h)
-            echo "Usage: ./context [options] [file1 file2 ...]"
+            echo "Usage: ./context [options] [include-pattern1 include-pattern2 ...]"
             echo ""
             echo "Options:"
-            echo "  --files=<pattern>        File pattern to include (e.g., \"src/*.js\")"
+            echo "  --include=<pattern>      File pattern to include (e.g., \"src/*.js\")"
             echo "  --exclude=<pattern>      File pattern to exclude (e.g., \"node_modules/**\")"
             echo "  --max-size=<size>        Maximum context size in KB/MB (e.g., \"500KB\")"
-            echo "  --depth=<num>            Dependency traversal depth (default: 1)"
-            echo "  --include-git            Include git information (recent commits, authors)"
-            echo "  --git-depth=<num>        Number of recent commits to include (default: 3)"
-            echo "  --summary                Include short summary of each file"
-            echo "  --show-file-sizes        Include file sizes in output"
-            echo "  --truncate-large=<size>  Truncate files larger than specified size (e.g., \"50KB\")"
-            echo "  --ls-files               Include git ls-files output (default: true)"
-            echo "  --no-ls-files            Don't include git ls-files output"
-            echo "  --ls-files-limit=<num>   Limit the number of files shown in ls-files (default: 100)"
+            echo "  --git                    Include basic git information (recent commits, branch)"
+            echo "  --show-sizes             Include file sizes in output"
+            echo "  --no-ls-files            Don't include git ls-files output in repository map"
             echo "  --help, -h               Show this help message"
+            echo ""
+            echo "Pattern matching:"
+            echo "  Patterns use bash 'find' command syntax with -path flag"
+            echo "  Examples:"
+            echo "    \"*.js\"               - All JavaScript files in current directory"
+            echo "    \"src/*.js\"           - All JavaScript files in src directory" 
+            echo "    \"src/**/*.js\"        - All JavaScript files in src and subdirectories"
+            echo "    \"!test/*\"            - Exclude all files in test directory"
+            echo ""
+            echo "Examples:"
+            echo "  ./context --include=\"src/*.js\" --exclude=\"*.test.js\""
+            echo "  ./context \"src/*.js\" \"*.md\" --max-size=1MB"
             exit 0
             ;;
         --*) echo "Unknown parameter: $1"; exit 1 ;;
-        *) FILES+=("$1"); shift ;;
+        *) INCLUDE+=("$1"); shift ;;
     esac
 done
 
@@ -70,28 +65,26 @@ convert_to_bytes() {
 }
 
 MAX_SIZE_BYTES=$(convert_to_bytes "$MAX_SIZE")
-TRUNCATE_SIZE_BYTES=0
-if [ -n "$TRUNCATE_LARGE" ]; then
-    TRUNCATE_SIZE_BYTES=$(convert_to_bytes "$TRUNCATE_LARGE")
-fi
 
 # Get all matching files
 find_files() {
     local all_files=""
     
-    for file_pattern in "${FILES[@]}"; do
-        if [ -f "$file_pattern" ]; then
-            all_files="$all_files"$'\n'"$file_pattern"
+    for pattern in "${INCLUDE[@]}"; do
+        if [ -f "$pattern" ]; then
+            all_files="$all_files"$'\n'"$pattern"
         else
-            local find_cmd="find . -type f -path \"$file_pattern\""
-            if [ -n "$EXCLUDE" ]; then
-                find_cmd="$find_cmd -not -path \"$EXCLUDE\""
-            fi
+            local find_cmd="find . -type f -path \"$pattern\""
             local found_files=$(eval $find_cmd)
             if [ -n "$found_files" ]; then
                 all_files="$all_files"$'\n'"$found_files"
             fi
         fi
+    done
+    
+    # Process exclusions
+    for exclude_pattern in "${EXCLUDE[@]}"; do
+        all_files=$(echo "$all_files" | grep -v "$exclude_pattern")
     done
     
     echo "$all_files" | grep -v "^$" | sort | uniq
@@ -119,10 +112,34 @@ human_readable_size() {
 # Start Markdown output
 echo "# Code Context"
 echo ""
-if [ ${#FILES[@]} -gt 0 ]; then
-    echo "## Files"
+
+# Include git information if requested
+if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "## Repository Information"
+    echo ""
+    echo "Branch: $(git branch --show-current)"
+    echo ""
+    echo "Recent commits:"
+    echo ""
+    git log -n 3 --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
+        echo "$line"
+    done
+    echo ""
     echo ""
 fi
+
+# Include git ls-files by default for repository map
+if [ "$SHOW_LS_FILES" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "## Repository Map"
+    echo ""
+    git ls-files | sort | while read -r file; do
+        echo "- $file"
+    done
+    echo ""
+fi
+
+echo "## Files"
+echo ""
 
 # Process each file
 for file in $ALL_FILES; do
@@ -134,92 +151,24 @@ for file in $ALL_FILES; do
     TOTAL_SIZE=$((TOTAL_SIZE + file_size))
     
     if [ $TOTAL_SIZE -gt $MAX_SIZE_BYTES ]; then
-        echo "Error: Total context size ($TOTAL_SIZE bytes) exceeds maximum allowed size ($(human_readable_size $MAX_SIZE_BYTES)). Reduce file scope or increase --max-size." >&2
+        echo "Error: Total context size exceeds maximum allowed size ($(human_readable_size $MAX_SIZE_BYTES)). Reduce file scope or increase --max-size." >&2
         exit 1
     fi
     
-    truncated=false
-    file_content=""
-    
-    if [ $TRUNCATE_SIZE_BYTES -gt 0 ] && [ $file_size -gt $TRUNCATE_SIZE_BYTES ]; then
-        file_content=$(head -c $TRUNCATE_SIZE_BYTES "$file")
-        truncated=true
-    else
-        file_content=$(cat "$file")
-    fi
-    
-    file_summary=""
-    if [ "$SUMMARY" = true ]; then
-        file_summary=$(head -n 20 "$file" | grep -E "^(//|#|/*) " | head -n 5 | sed 's/^[\/\#\* ]*//')
-    fi
+    file_content=$(cat "$file")
     
     if [ "$SHOW_FILE_SIZES" = true ]; then
-        echo "Size: $(human_readable_size $file_size)"
-        echo ""
+        echo "### $file ($(human_readable_size $file_size))"
+    else
+        echo "### $file"
     fi
+    echo ""
     
-    if [ "$SUMMARY" = true ] && [ -n "$file_summary" ]; then
-        echo "Summary:"
-        echo "$file_summary"
-        echo ""
-    fi
-    
-    # Use proper markdown code block with three backticks
-    echo "\`\`\` ${file##*.} $file"
+    # Use proper markdown code block with file extension for syntax highlighting
+    echo "\`\`\` ${file##*.}"
     echo "$file_content"
-    if [ "$truncated" = true ]; then
-        echo ""
-        echo "... [File truncated due to size limit] ..."
-    fi
     echo "\`\`\`"
     echo ""
 done
-
-# Include git information if requested
-if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "## Git Information"
-    echo ""
-    echo "### Recent Commits"
-    echo ""
-    git log -n $GIT_DEPTH --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
-        echo "$line"
-    done
-    echo ""
-    echo "### Branch Information"
-    echo ""
-    echo "Current branch: $(git branch --show-current)"
-    echo ""
-fi
-
-# Include git ls-files output if requested
-if [ "$INCLUDE_LS_FILES" = true ] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    GIT_FILES=$(git ls-files | sort)
-    GIT_FILES_COUNT=$(echo "$GIT_FILES" | wc -l)
-    
-    if [ $GIT_FILES_COUNT -gt $LS_FILES_LIMIT ]; then
-        GIT_FILES=$(echo "$GIT_FILES" | head -n $LS_FILES_LIMIT)
-        GIT_FILES_TRUNCATED=true
-    else
-        GIT_FILES_TRUNCATED=false
-    fi
-    
-    echo "## Repository Files"
-    echo ""
-    echo "$GIT_FILES" | while read -r file; do
-        echo "- $file"
-    done
-    if [ "$GIT_FILES_TRUNCATED" = true ]; then
-        echo "- ... (and $(($GIT_FILES_COUNT - $LS_FILES_LIMIT)) more files)"
-    fi
-    echo ""
-fi
-
-# Include default prompt if available
-if [ -f "prompts/context_prompt.txt" ]; then
-    echo "## Instructions for LLM"
-    echo ""
-    cat "prompts/context_prompt.txt"
-    echo ""
-fi
 
 exit 0
