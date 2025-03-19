@@ -15,6 +15,11 @@ CONFIRM=false
 ONLY_FILES=""
 IGNORE_FILES=""
 
+# Function to get git repository root
+get_git_root() {
+    git rev-parse --show-toplevel 2>/dev/null
+}
+
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -49,6 +54,12 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
+# Get git root if available
+GIT_ROOT=$(get_git_root)
+if [ -z "$GIT_ROOT" ] && [ "$VERBOSE" = true ]; then
+    echo "Warning: Not in a git repository, absolute paths will be treated as system paths"
+fi
+
 # Create backup directory if needed
 if [ "$BACKUP" = true ] && [ ! -d "$BACKUP_DIR" ]; then
     if [ "$DRY_RUN" = false ]; then
@@ -72,6 +83,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Function to normalize path relative to git root
+normalize_path() {
+    local path="$1"
+    if [ -n "$GIT_ROOT" ] && [[ "$path" == /* ]]; then
+        # Remove leading slash and resolve relative to git root
+        local rel_path="${path#/}"
+        echo "$GIT_ROOT/$rel_path"
+    else
+        echo "$path"
+    fi
+}
+
 # Extract code blocks and their file names
 extract_blocks() {
     local current_file=""
@@ -81,12 +104,13 @@ extract_blocks() {
     echo "$MARKDOWN" | while IFS= read -r line; do
         if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]+(.+) ]]; then
             current_file="${BASH_REMATCH[2]}"
+            normalized_file=$(normalize_path "$current_file")
             in_block=true
             temp_file="$TEMP_DIR/$current_file"
             mkdir -p "$(dirname "$temp_file")"
             : > "$temp_file"  # Create empty file
             if [ "$VERBOSE" = true ]; then
-                echo "Starting code block for file: $current_file"
+                echo "Starting code block for file: $current_file (normalized: $normalized_file)"
             fi
             continue
         fi
@@ -137,7 +161,8 @@ apply_block() {
     fi
     
     # Normalize file path
-    file=$(realpath -m "$file" 2>/dev/null || echo "$file")
+    local normalized_file=$(normalize_path "$file")
+    file="$normalized_file"
     
     if [ ! -f "$file" ]; then
         if [ "$CREATE_MISSING" = true ]; then
@@ -222,6 +247,9 @@ if [ "$VERBOSE" = true ]; then
     echo "Starting markdown code application..."
     if [ "$DRY_RUN" = true ]; then
         echo "Running in DRY RUN mode (no changes will be applied)"
+    fi
+    if [ -n "$GIT_ROOT" ]; then
+        echo "Git repository root detected at: $GIT_ROOT"
     fi
 fi
 
