@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# test_runner.sh - Main test runner for context script (TAP-compliant)
+# test_runner.sh - Main test runner for CLI tools (TAP-compliant)
 
 # Get the directory where the test_runner.sh script is located
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,8 +14,8 @@ TEST_NUMBER=0
 # Print TAP header
 echo "TAP version 13"
 
-# Find all test files
-test_files=("$TEST_DIR"/unit/test_*.sh)
+# Find all consolidated test files (we now have one file per CLI tool)
+test_files=("$TEST_DIR"/test_*.sh)
 total_test_files=${#test_files[@]}
 echo "1..$total_test_files"
 
@@ -28,7 +28,9 @@ done
 for test_file in "${test_files[@]}"; do
     if [ -f "$test_file" ]; then
         TEST_NUMBER=$((TEST_NUMBER + 1))
-        test_name=$(basename "$test_file" .sh | sed 's/^test_//')
+        test_name=$(basename "$test_file" .sh)
+        
+        echo "# Running test suite: $test_name"
         
         # Run the test and capture its output
         test_output=$("$test_file" 2>&1)
