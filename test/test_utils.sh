@@ -6,10 +6,6 @@
 TESTS_PASSED=0
 TESTS_FAILED=0
 
-# Get the directory where the test_utils.sh script is located
-TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$TEST_DIR/.." && pwd)"
-
 # Function to run a test
 # Usage: run_test "test_name" "command_to_run"
 run_test() {
@@ -19,7 +15,7 @@ run_test() {
     echo -n "- Testing $test_name... "
     
     # Run the command and capture output and exit status
-    output=$(eval $command 2>&1)
+    output=$(eval "$command" 2>&1)
     status=$?
     
     if [ $status -eq 0 ]; then
@@ -45,7 +41,9 @@ create_test_dir() {
 # Usage: cleanup_test_dir "$test_dir"
 cleanup_test_dir() {
     local test_dir=$1
-    rm -rf "$test_dir"
+    if [ -d "$test_dir" ]; then
+        rm -rf "$test_dir"
+    fi
 }
 
 # Function to assert that a string contains another string
@@ -80,5 +78,9 @@ create_test_file() {
     local file_path=$1
     local size_bytes=$2
     
-    dd if=/dev/zero of="$file_path" bs=1 count=$size_bytes status=none
+    dd if=/dev/zero of="$file_path" bs=1 count="$size_bytes" status=none 2>/dev/null
 }
+
+# Export variables to be available in subprocesses
+export TESTS_PASSED
+export TESTS_FAILED

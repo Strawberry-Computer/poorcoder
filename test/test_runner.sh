@@ -24,6 +24,12 @@ for test_file in "$TEST_DIR"/unit/test_*.sh; do
         echo "Running tests in $(basename "$test_file")"
         echo "------------------------------------"
         bash "$test_file"
+        
+        # Capture exit status
+        test_status=$?
+        if [ $test_status -ne 0 ]; then
+            echo "Test file $(basename "$test_file") failed with status $test_status"
+        fi
     fi
 done
 
