@@ -1,0 +1,2 @@
+#!/bin/bash
+git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
