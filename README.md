@@ -21,6 +21,8 @@ Unlike IDE-integrated solutions (Cursor, aider, Claude Code, etc.), poorcoder is
 
 ## Installation
 
+### Standard Installation
+
 Simply clone this repository and make the scripts executable:
 
 ```bash
@@ -30,6 +32,29 @@ chmod +x context apply-md git-context
 ```
 
 You can either use the scripts directly from this folder or add them to your PATH for global access.
+
+### Project-Specific Installation (Recommended)
+
+For heavy usage, copy the scripts and prompts directory directly into your project:
+
+```bash
+# Clone the repository
+git clone https://github.com/vgrichina/poorcoder.git
+# Copy essential files to your project
+cp poorcoder/{context,apply-md,git-context} /path/to/your/project/
+cp -r poorcoder/prompts /path/to/your/project/
+# Make scripts executable
+chmod +x /path/to/your/project/{context,apply-md,git-context}
+```
+
+This approach lets you customize both the scripts and prompts for your specific project workflow. You can also create custom aliases or wrapper scripts, for example:
+
+```bash
+# Create a simple autocommit script
+echo '#!/bin/bash
+git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e' > autocommit
+chmod +x autocommit
+```
 
 ## Scripts
 
