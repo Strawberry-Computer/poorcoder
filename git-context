@@ -69,7 +69,8 @@ if [ -n "$status_output" ]; then
         # Extract the status code (first two characters)
         status_code="${line:0:2}"
         # Extract the filename (everything after the status code and whitespace)
-        file=$(echo "$line" | sed 's/^.. *//')
+        file=${line#??}
+        file=${file#"${file%%[! ]*}"} # Remove leading whitespace
         status_desc=""
         
         # Determine the status description
@@ -89,10 +90,10 @@ if [ -n "$status_output" ]; then
 fi
 
 # Show recent commits
-if [ $RECENT_COMMITS -gt 0 ]; then
+if [ "$RECENT_COMMITS" -gt 0 ]; then
     echo "## Recent Commits (for reference)"
     echo ""
-    git log -n $RECENT_COMMITS --pretty=format:"- %h: %s (%an, %ar)" | while read -r line; do
+    git log -n "$RECENT_COMMITS" --pretty=format:"- %h: %s (%an, %ar)" | while read -r line; do
         echo "$line"
     done
     echo ""

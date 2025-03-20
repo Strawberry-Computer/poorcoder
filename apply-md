@@ -39,6 +39,8 @@ FILES_FILE="$TEMP_DIR/files.txt"
 cleanup() {
     rm -rf "$TEMP_DIR"
 }
+
+# Register cleanup on exit
 trap cleanup EXIT
 
 # Extract code blocks and their file names
@@ -110,8 +112,7 @@ apply_block() {
     fi
     
     # Check for changes
-    diff -q "$file" "$content_file" > /dev/null
-    if [ $? -eq 0 ]; then
+    if diff -q "$file" "$content_file" > /dev/null; then
         if [ "$VERBOSE" = true ]; then
             echo "No changes needed for: $file"
         fi
