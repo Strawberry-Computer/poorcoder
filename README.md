@@ -10,11 +10,20 @@ This repository contains three main tools:
 2. **`apply-md`** - Applies code changes from LLM's markdown response
 3. **`git-context`** - Generates git context for AI-assisted commit messages
 
+## Workflow
+
+Here's how poorcoder fits into your development workflow:
+
+![poorcoder Workflow Diagram](./images/poorcoder-workflow-diagram.svg)
+
 ## Why poorcoder?
 
-Unlike IDE-integrated solutions (Cursor, aider, Claude Code, etc.), poorcoder is designed to work with your existing web-based LLM subscriptions (~$20/month) while maintaining your terminal workflow. This approach:
+Unlike IDE-integrated solutions (Cursor, aider, Claude Code, etc.), poorcoder is designed to work with your existing web-based LLM subscriptions (~$20-30/month) while maintaining your terminal workflow. 
 
-- Is more cost-effective than dedicated API usage
+![poorcoder vs. Other AI Coding Tools](./images/poorcoder-comparison-table.svg)
+
+Key benefits:
+- Is more cost-effective than dedicated API usage (which can cost $100-500/month for heavy use)
 - Leverages the polished UX of web/mobile LLM interfaces
 - Preserves your terminal-based development workflow
 - Follows Unix philosophy (small tools doing one thing well)
@@ -58,6 +67,10 @@ chmod +x autocommit
 
 ## Scripts
 
+Here's a detailed overview of each script in poorcoder:
+
+![poorcoder Script Details](./images/poorcoder-script-details.svg)
+
 ### 1. `context` - Code Context Generator
 
 Extracts relevant code context from your project to send to a web-based LLM.
@@ -99,6 +112,58 @@ git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)"
 ```
 
 [See full documentation for git-context](./docs/git-context.md)
+
+## Component Interaction
+
+The following diagram shows how the different components of poorcoder interact with each other and with external systems:
+
+```mermaid
+flowchart TB
+    subgraph "Terminal Environment"
+        context["context\n(Extract Code Context)"]
+        applymd["apply-md\n(Apply Code Changes)"]
+        gitcontext["git-context\n(Generate Git Info)"]
+        clipboard[("Clipboard\n(pbcopy/pbpaste)")]
+        files[("Project Files")]
+        git[("Git Repository")]
+    end
+    
+    subgraph "Web Environment"
+        llm["Web LLM\n(Claude.ai, Grok, etc.)"]
+    end
+    
+    subgraph "Optional CLI"
+        llmcli["LLM CLI Tool\n(e.g., llm, sgpt)"]
+    end
+    
+    %% Connections for Web Workflow
+    context -->|"Extract context"| files
+    context -->|"Copy to clipboard"| clipboard
+    clipboard -->|"Paste context"| llm
+    llm -->|"Generate code"| clipboard
+    clipboard -->|"Paste response"| applymd
+    applymd -->|"Update files"| files
+    
+    %% Connections for Git workflow
+    gitcontext -->|"Extract changes"| git
+    gitcontext -->|"Generate context"| llmcli
+    llmcli -->|"Generate message"| git
+    
+    %% Direct CLI workflow
+    context -.->|"Direct pipe"| llmcli
+    llmcli -.->|"Direct pipe"| applymd
+    
+    %% Styling
+    classDef tool fill:#4b6584,stroke:#333,stroke-width:1px,color:white
+    classDef storage fill:#f5cd79,stroke:#333,stroke-width:1px
+    classDef external fill:#6a89cc,stroke:#333,stroke-width:1px,color:white
+    classDef cli fill:#78e08f,stroke:#333,stroke-width:1px
+    
+    class context,applymd,gitcontext tool
+    class files,clipboard,git storage
+    class llm external
+    class llmcli cli
+```
 
 ## Usage Workflows
 
