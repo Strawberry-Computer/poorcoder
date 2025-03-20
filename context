@@ -54,13 +54,13 @@ done
 convert_to_bytes() {
     local size=$1
     local num=${size%[KMG]*}
-    local unit=${size#$num}
+    local unit=${size#"$num"}
     
     case $unit in
         KB|K) echo $((num * 1024)) ;;
         MB|M) echo $((num * 1024 * 1024)) ;;
         GB|G) echo $((num * 1024 * 1024 * 1024)) ;;
-        *) echo $num ;;
+        *) echo "$num" ;;
     esac
 }
 
@@ -75,7 +75,8 @@ find_files() {
             all_files="$all_files"$'\n'"$pattern"
         else
             local find_cmd="find . -type f -path \"$pattern\""
-            local found_files=$(eval $find_cmd)
+            local found_files
+            found_files=$(eval "$find_cmd")
             if [ -n "$found_files" ]; then
                 all_files="$all_files"$'\n'"$found_files"
             fi
@@ -100,12 +101,12 @@ human_readable_size() {
     local unit_index=0
     local size_float=$size
     
-    while [ $(echo "$size_float >= 1024" | bc -l) -eq 1 ] && [ $unit_index -lt 4 ]; do
+    while [ "$(echo "$size_float >= 1024" | bc -l)" -eq 1 ] && [ $unit_index -lt 4 ]; do
         size_float=$(echo "scale=2; $size_float / 1024" | bc -l)
         unit_index=$((unit_index + 1))
     done
     
-    size_float=$(echo $size_float | sed 's/\.0*$//')
+    size_float=${size_float%.0*}
     echo "$size_float ${units[$unit_index]}"
 }
 
@@ -121,7 +122,7 @@ if [ "$INCLUDE_GIT" = true ] && command -v git >/dev/null 2>&1 && git rev-parse 
     echo ""
     echo "Recent commits:"
     echo ""
-    git log -n 3 --pretty=format:"* %h: %s (%an, %ar)" | while read line; do
+    git log -n 3 --pretty=format:"* %h: %s (%an, %ar)" | while read -r line; do
         echo "$line"
     done
     echo ""
@@ -150,15 +151,15 @@ for file in $ALL_FILES; do
     file_size=$(wc -c < "$file")
     TOTAL_SIZE=$((TOTAL_SIZE + file_size))
     
-    if [ $TOTAL_SIZE -gt $MAX_SIZE_BYTES ]; then
-        echo "Error: Total context size exceeds maximum allowed size ($(human_readable_size $MAX_SIZE_BYTES)). Reduce file scope or increase --max-size." >&2
+    if [ $TOTAL_SIZE -gt "$MAX_SIZE_BYTES" ]; then
+        echo "Error: Total context size exceeds maximum allowed size ($(human_readable_size "$MAX_SIZE_BYTES")). Reduce file scope or increase --max-size." >&2
         exit 1
     fi
     
     file_content=$(cat "$file")
     
     if [ "$SHOW_FILE_SIZES" = true ]; then
-        echo "### $file ($(human_readable_size $file_size))"
+        echo "### $file ($(human_readable_size "$file_size"))"
     else
         echo "### $file"
     fi

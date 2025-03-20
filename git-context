@@ -92,7 +92,7 @@ fi
 if [ $RECENT_COMMITS -gt 0 ]; then
     echo "## Recent Commits (for reference)"
     echo ""
-    git log -n $RECENT_COMMITS --pretty=format:"- %h: %s (%an, %ar)" | while read line; do
+    git log -n $RECENT_COMMITS --pretty=format:"- %h: %s (%an, %ar)" | while read -r line; do
         echo "$line"
     done
     echo ""
