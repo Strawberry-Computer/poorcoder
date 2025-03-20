@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <!-- Background -->
+  <rect width="800" height="500" fill="#f8f9fa" rx="10" ry="10" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">poorcoder Script Details</text>
+  
+  <!-- context script -->
+  <rect x="50" y="80" width="220" height="380" fill="white" rx="10" ry="10" stroke="#ddd" stroke-width="2" />
+  <rect x="50" y="80" width="220" height="40" fill="#4b6584" rx="10" ry="10" />
+  <text x="160" y="107" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">context</text>
+  
+  <!-- context details -->
+  <text x="70" y="140" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Purpose:</text>
+  <text x="70" y="165" font-family="Arial, sans-serif" font-size="14" fill="#333">Extract code context from your</text>
+  <text x="70" y="185" font-family="Arial, sans-serif" font-size="14" fill="#333">project to send to an LLM.</text>
+  
+  <text x="70" y="215" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Usage:</text>
+  <rect x="70" y="225" width="180" height="50" fill="#f1f2f6" rx="5" ry="5" />
+  <text x="80" y="245" font-family="Courier New, monospace" font-size="12" fill="#333">./context src/*.js</text>
+  <text x="80" y="265" font-family="Courier New, monospace" font-size="12" fill="#333">README.md | pbcopy</text>
+  
+  <text x="70" y="295" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Key Options:</text>
+  <text x="70" y="320" font-family="Arial, sans-serif" font-size="14" fill="#333">• --include="pattern"</text>
+  <text x="70" y="345" font-family="Arial, sans-serif" font-size="14" fill="#333">• --exclude="pattern"</text>
+  <text x="70" y="370" font-family="Arial, sans-serif" font-size="14" fill="#333">• --git (include git info)</text>
+  
+  <text x="70" y="400" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Output:</text>
+  <text x="70" y="425" font-family="Arial, sans-serif" font-size="14" fill="#333">Markdown-formatted code</text>
+  <text x="70" y="445" font-family="Arial, sans-serif" font-size="14" fill="#333">with file paths and syntax</text>
+  
+  <!-- apply-md script -->
+  <rect x="290" y="80" width="220" height="380" fill="white" rx="10" ry="10" stroke="#ddd" stroke-width="2" />
+  <rect x="290" y="80" width="220" height="40" fill="#4b6584" rx="10" ry="10" />
+  <text x="400" y="107" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">apply-md</text>
+  
+  <!-- apply-md details -->
+  <text x="310" y="140" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Purpose:</text>
+  <text x="310" y="165" font-family="Arial, sans-serif" font-size="14" fill="#333">Apply code changes from</text>
+  <text x="310" y="185" font-family="Arial, sans-serif" font-size="14" fill="#333">LLM's markdown response.</text>
+  
+  <text x="310" y="215" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Usage:</text>
+  <rect x="310" y="225" width="180" height="50" fill="#f1f2f6" rx="5" ry="5" />
+  <text x="320" y="245" font-family="Courier New, monospace" font-size="12" fill="#333">pbpaste | ./apply-md</text>
+  <text x="320" y="265" font-family="Courier New, monospace" font-size="12" fill="#333">--create-missing</text>
+  
+  <text x="310" y="295" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Key Options:</text>
+  <text x="310" y="320" font-family="Arial, sans-serif" font-size="14" fill="#333">• --dry-run</text>
+  <text x="310" y="345" font-family="Arial, sans-serif" font-size="14" fill="#333">• --create-missing</text>
+  <text x="310" y="370" font-family="Arial, sans-serif" font-size="14" fill="#333">• --verbose</text>
+  
+  <text x="310" y="400" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Expected Format:</text>
+  <rect x="310" y="410" width="180" height="40" fill="#f1f2f6" rx="5" ry="5" />
+  <text x="320" y="430" font-family="Courier New, monospace" font-size="10" fill="#333">```js filename.js</text>
+  <text x="320" y="445" font-family="Courier New, monospace" font-size="10" fill="#333">// code here</text>
+  <text x="320" y="460" font-family="Courier New, monospace" font-size="10" fill="#333">```</text>
+  
+  <!-- git-context script -->
+  <rect x="530" y="80" width="220" height="380" fill="white" rx="10" ry="10" stroke="#ddd" stroke-width="2" />
+  <rect x="530" y="80" width="220" height="40" fill="#4b6584" rx="10" ry="10" />
+  <text x="640" y="107" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">git-context</text>
+  
+  <!-- git-context details -->
+  <text x="550" y="140" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Purpose:</text>
+  <text x="550" y="165" font-family="Arial, sans-serif" font-size="14" fill="#333">Generate git context for</text>
+  <text x="550" y="185" font-family="Arial, sans-serif" font-size="14" fill="#333">AI-assisted commit messages.</text>
+  
+  <text x="550" y="215" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Usage:</text>
+  <rect x="550" y="225" width="180" height="50" fill="#f1f2f6" rx="5" ry="5" />
+  <text x="560" y="245" font-family="Courier New, monospace" font-size="11" fill="#333">git commit -am "$(./git-</text>
+  <text x="560" y="265" font-family="Courier New, monospace" font-size="11" fill="#333">context | llm)" -e</text>
+  
+  <text x="550" y="295" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Key Options:</text>
+  <text x="550" y="320" font-family="Arial, sans-serif" font-size="14" fill="#333">• --recent-commits=N</text>
+  <text x="550" y="345" font-family="Arial, sans-serif" font-size="14" fill="#333">• --prompt=file.txt</text>
+  <text x="550" y="370" font-family="Arial, sans-serif" font-size="14" fill="#333">• --no-prompt</text>
+  
+  <text x="550" y="400" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Output:</text>
+  <text x="550" y="425" font-family="Arial, sans-serif" font-size="14" fill="#333">Git status, diff, changed files,</text>
+  <text x="550" y="445" font-family="Arial, sans-serif" font-size="14" fill="#333">and commit message guidance.</text>
+</svg>

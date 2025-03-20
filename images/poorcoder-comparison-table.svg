@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420">
+  <!-- Background -->
+  <rect width="800" height="420" fill="#f8f9fa" rx="10" ry="10" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">poorcoder vs. Other AI Coding Tools</text>
+  
+  <!-- Table Headers -->
+  <rect x="50" y="70" width="200" height="50" fill="#4b6584" rx="5" ry="5" />
+  <rect x="250" y="70" width="170" height="50" fill="#4b6584" rx="5" ry="5" />
+  <rect x="420" y="70" width="170" height="50" fill="#4b6584" rx="5" ry="5" />
+  <rect x="590" y="70" width="160" height="50" fill="#4b6584" rx="5" ry="5" />
+  
+  <text x="150" y="100" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">Feature</text>
+  <text x="335" y="100" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">poorcoder</text>
+  <text x="505" y="100" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">IDE Integrations</text>
+  <text x="670" y="100" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">CLI Tools</text>
+  
+  <!-- Row 1 -->
+  <rect x="50" y="120" width="200" height="50" fill="#d1d8e0" rx="5" ry="5" />
+  <rect x="250" y="120" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="420" y="120" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="590" y="120" width="160" height="50" fill="white" rx="5" ry="5" />
+  
+  <text x="150" y="150" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Cost</text>
+  <text x="335" y="150" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">$20-30/month (existing sub)</text>
+  <text x="505" y="150" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">$15-60/month + API</text>
+  <text x="670" y="150" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">$100-500/month (API)</text>
+  
+  <!-- Row 2 -->
+  <rect x="50" y="170" width="200" height="50" fill="#d1d8e0" rx="5" ry="5" />
+  <rect x="250" y="170" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="420" y="170" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="590" y="170" width="160" height="50" fill="white" rx="5" ry="5" />
+  
+  <text x="150" y="200" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Terminal Workflow</text>
+  <text x="335" y="200" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Full ✓</text>
+  <text x="505" y="200" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Partial ∼</text>
+  <text x="670" y="200" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Full ✓</text>
+  
+  <!-- Row 3 -->
+  <rect x="50" y="220" width="200" height="50" fill="#d1d8e0" rx="5" ry="5" />
+  <rect x="250" y="220" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="420" y="220" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="590" y="220" width="160" height="50" fill="white" rx="5" ry="5" />
+  
+  <text x="150" y="250" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Installation</text>
+  <text x="335" y="250" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Copy scripts (lightweight)</text>
+  <text x="505" y="250" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Full IDE addon</text>
+  <text x="670" y="250" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Package manager</text>
+  
+  <!-- Row 4 -->
+  <rect x="50" y="270" width="200" height="50" fill="#d1d8e0" rx="5" ry="5" />
+  <rect x="250" y="270" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="420" y="270" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="590" y="270" width="160" height="50" fill="white" rx="5" ry="5" />
+  
+  <text x="150" y="300" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">LLM Quality</text>
+  <text x="335" y="300" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">High (latest UI models)</text>
+  <text x="505" y="300" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">High (specialized)</text>
+  <text x="670" y="300" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Varies by API used</text>
+  
+  <!-- Row 5 -->
+  <rect x="50" y="320" width="200" height="50" fill="#d1d8e0" rx="5" ry="5" />
+  <rect x="250" y="320" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="420" y="320" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="590" y="320" width="160" height="50" fill="white" rx="5" ry="5" />
+  
+  <text x="150" y="350" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Customizability</text>
+  <text x="335" y="350" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">High (simple bash)</text>
+  <text x="505" y="350" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Limited by IDE</text>
+  <text x="670" y="350" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Moderate</text>
+  
+  <!-- Row 6 -->
+  <rect x="50" y="370" width="200" height="50" fill="#d1d8e0" rx="5" ry="5" />
+  <rect x="250" y="370" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="420" y="370" width="170" height="50" fill="white" rx="5" ry="5" />
+  <rect x="590" y="370" width="160" height="50" fill="white" rx="5" ry="5" />
+  
+  <text x="150" y="400" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Unix Philosophy</text>
+  <text x="335" y="400" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Strong ✓</text>
+  <text x="505" y="400" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Weak ✗</text>
+  <text x="670" y="400" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Medium ∼</text>
+</svg>

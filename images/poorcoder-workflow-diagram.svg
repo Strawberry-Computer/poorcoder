@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <!-- Background -->
+  <rect width="800" height="500" fill="#f8f9fa" rx="10" ry="10" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">poorcoder Workflow</text>
+  
+  <!-- Terminal Box -->
+  <rect x="50" y="80" width="200" height="350" fill="#2f3542" rx="10" ry="10" stroke="#1e272e" stroke-width="2" />
+  <text x="150" y="110" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Terminal</text>
+  
+  <!-- Web LLM Box -->
+  <rect x="550" y="80" width="200" height="350" fill="#6a89cc" rx="10" ry="10" stroke="#4a69bd" stroke-width="2" />
+  <text x="650" y="110" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Web LLM</text>
+  <text x="650" y="135" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="white">(Claude.ai, Grok, etc.)</text>
+  
+  <!-- Terminal Commands -->
+  <rect x="70" y="150" width="160" height="30" fill="#3c40c6" rx="5" ry="5" />
+  <text x="150" y="170" font-family="Courier New, monospace" font-size="12" text-anchor="middle" fill="white">./context *.js README.md</text>
+  
+  <rect x="70" y="330" width="160" height="30" fill="#3c40c6" rx="5" ry="5" />
+  <text x="150" y="350" font-family="Courier New, monospace" font-size="12" text-anchor="middle" fill="white">pbpaste | ./apply-md</text>
+  
+  <rect x="70" y="380" width="160" height="30" fill="#3c40c6" rx="5" ry="5" />
+  <text x="150" y="400" font-family="Courier New, monospace" font-size="12" text-anchor="middle" fill="white">./git-context | LLM</text>
+  
+  <!-- LLM Interface Elements -->
+  <rect x="570" y="180" width="160" height="120" fill="#f1f2f6" rx="5" ry="5" />
+  <text x="650" y="200" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Context from codebase</text>
+  <rect x="580" y="210" width="140" height="80" fill="#dfe4ea" rx="3" ry="3" />
+  <text x="650" y="230" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">import React from 'react';</text>
+  <text x="650" y="245" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">function App() {</text>
+  <text x="650" y="260" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">  // Code here</text>
+  <text x="650" y="275" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">}</text>
+  
+  <rect x="570" y="320" width="160" height="90" fill="#f1f2f6" rx="5" ry="5" />
+  <text x="650" y="340" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">AI Generated Code</text>
+  <rect x="580" y="350" width="140" height="50" fill="#dfe4ea" rx="3" ry="3" />
+  <text x="650" y="370" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">```javascript file.js</text>
+  <text x="650" y="385" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">// Fixed code</text>
+  <text x="650" y="400" font-family="Courier New, monospace" font-size="10" text-anchor="middle" fill="#333">```</text>
+  
+  <!-- Workflow Arrows -->
+  <!-- Context to Web LLM -->
+  <path d="M 250 165 L 550 230" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" />
+  <!-- Text label for arrow -->
+  <text x="370" y="160" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333" background="white">1. Generate context</text>
+  <text x="370" y="180" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333" background="white">and copy to clipboard</text>
+  
+  <!-- Web LLM to Terminal -->
+  <path d="M 550 365 L 250 330" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" />
+  <!-- Text label for arrow -->
+  <text x="420" y="370" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333" background="white">2. Paste AI response</text>
+  <text x="420" y="390" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333" background="white">and apply changes</text>
+  
+  <!-- Commit Context -->
+  <path d="M 230 395 C 300 450, 500 450, 570 395" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="5,5" />
+  <!-- Text label for arrow -->
+  <text x="400" y="460" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">3. Optional: Generate commit message</text>
+  
+  <!-- Define the arrowhead marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+</svg>
