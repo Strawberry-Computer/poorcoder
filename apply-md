@@ -35,13 +35,9 @@ MARKDOWN=$(cat)
 TEMP_DIR=$(mktemp -d)
 FILES_FILE="$TEMP_DIR/files.txt"
 
-# Function to cleanup temporary files
-cleanup() {
-    rm -rf "$TEMP_DIR"
-}
-
-# Register cleanup on exit
-trap cleanup EXIT
+# Setup cleanup trap directly without a function
+# shellcheck disable=SC2064
+trap "rm -rf '$TEMP_DIR'" EXIT
 
 # Extract code blocks and their file names
 extract_blocks() {
