@@ -8,7 +8,7 @@ TEST_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$TEST_DIR/.." && pwd)"
 
 # Source test utilities
-source "$TEST_DIR/test_utils.sh"
+source "test/test_utils.sh"
 
 # Initialize variables
 test_number=0

@@ -29,7 +29,14 @@ You can either use the scripts directly from this folder or add them to your PAT
 Generates contextual information from a codebase to send to an LLM.
 
 ```bash
-./context --files="src/components/*.js" --exclude="*.test.js" --max-size=300KB --depth=2 --include-git > context.txt
+# Using file patterns
+./context --include="src/*.js" --exclude="*.test.js" > context.md
+
+# Using direct patterns as arguments
+./context "src/*.js" "README.md" > context.md
+
+# Including git information
+./context --include="src/*.js" --git > context.md
 ```
 
 [See full documentation for context](./docs/context.md)
@@ -49,7 +56,7 @@ cat llm_response.md | ./apply-md --dry-run --verbose
 Generates git-related context to help LLMs create meaningful commit messages.
 
 ```bash
-./git-context --diff --recent-commits=2 --prompt --conventional > commit_context.txt
+./git-context --recent-commits=5 --prompt=prompts/conventional_commit.txt > commit_context.txt
 ```
 
 [See full documentation for git-context](./docs/git-context.md)
@@ -62,7 +69,7 @@ These tools are designed to work seamlessly in Unix pipelines, allowing you to c
 
 ```bash
 # Copy code context directly to clipboard (macOS)
-./context --files="src/api/*.js" | pbcopy
+./context --include="src/api/*.js" | pbcopy
 
 # Generate and apply code changes directly from clipboard (macOS)
 pbpaste | ./apply-md
@@ -71,7 +78,7 @@ pbpaste | ./apply-md
 git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
 
 # Stream context to an LLM and apply changes in one command
-./context --files="src/components/Button.js" | llm "Refactor this component to use hooks" | ./apply-md
+./context --include="src/components/Button.js" | llm "Refactor this component to use hooks" | ./apply-md
 ```
 
 ### Scenario: Bug Fix Workflow
@@ -81,7 +88,7 @@ Let's walk through a complete workflow for fixing a bug:
 1. Identify the files involved in the bug:
    ```bash
    # Generate context for the relevant files
-   ./context --files="src/utils/validation.js" --files="src/components/Form.js" --depth=1 | pbcopy
+   ./context --include="src/utils/validation.js" --include="src/components/Form.js" | pbcopy
    ```
 
 2. Paste the context into your preferred AI assistant's web UI with your request:
@@ -96,7 +103,7 @@ Let's walk through a complete workflow for fixing a bug:
 4. Generate an appropriate commit message:
    ```bash
    # Auto-generate semantically meaningful commit message
-   ./git-context --diff | llm "Generate a conventional commit message" | git commit -F -
+   ./git-context | llm "Generate a conventional commit message" | git commit -F -
    
    # Or with manual editing
    git commit -am "$(./git-context | llm "Write a commit message")" -e
@@ -108,7 +115,7 @@ When working on larger refactoring tasks:
 
 1. Generate context with git history for better understanding:
    ```bash
-   ./context --files="src/utils/parser.js" --depth=1 --include-git --git-depth=5 > parser_context.txt
+   ./context --include="src/utils/parser.js" --git > parser_context.txt
    ```
 
 2. Send the context to an LLM with your request (e.g., "Refactor this parser to improve performance")
@@ -122,7 +129,7 @@ When working on larger refactoring tasks:
 
 4. Generate commit context and message in one step:
    ```bash
-   git commit -am "$(./git-context --diff --conventional | llm "Generate a detailed commit message")" -e
+   git commit -am "$(./git-context --prompt=prompts/conventional_commit.txt | llm "Generate a detailed commit message")" -e
    ```
 
 ## Customization
@@ -138,7 +145,7 @@ You can create your own prompt templates for different scenarios:
 echo "Please review this code and identify potential bugs and security issues." > prompts/review_prompt.txt
 
 # Use your custom prompt with the context generator
-./context --files="src/*.js" | cat - prompts/review_prompt.txt | llm
+./context --include="src/*.js" | cat - prompts/review_prompt.txt | llm
 ```
 
 ### Integration with Other Tools
