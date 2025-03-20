@@ -5,6 +5,7 @@
 # Get the directory where the test_runner.sh script is located
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$TEST_DIR/.." && pwd)"
+export PROJECT_ROOT  # Export to make it available to test scripts
 
 # Initialize counters
 TESTS_PASSED=0
@@ -42,7 +43,7 @@ for test_file in "${test_files[@]}"; do
         else
             echo "not ok $TEST_NUMBER - $test_name"
             echo "# Test output:"
-            echo "$test_output" | sed 's/^/#  /'
+            echo "${test_output//$'\n'/$'\n'#  }"  # Use parameter expansion instead of sed
             TESTS_FAILED=$((TESTS_FAILED + 1))
         fi
     fi

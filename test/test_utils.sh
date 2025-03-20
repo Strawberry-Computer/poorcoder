@@ -18,15 +18,19 @@ run_test() {
     fi
     
     # Create temporary files for command output and error
-    local output_file=$(mktemp)
-    local error_file=$(mktemp)
+    local output_file
+    output_file=$(mktemp)
+    local error_file
+    error_file=$(mktemp)
     
     # Run the command
     eval "$command" > "$output_file" 2> "$error_file"
     local status=$?
     
-    local output=$(cat "$output_file")
-    local error=$(cat "$error_file")
+    local output
+    output=$(cat "$output_file")
+    local error
+    error=$(cat "$error_file")
     
     # Handle the result
     if [ $status -eq 0 ]; then
@@ -37,12 +41,12 @@ run_test() {
         
         if [ -n "$output" ]; then
             echo "# Output:"
-            echo "$output" | sed 's/^/#  /'
+            echo "${output//$'\n'/$'\n'#  }"  # Use parameter expansion instead of sed
         fi
         
         if [ -n "$error" ]; then
             echo "# Error:"
-            echo "$error" | sed 's/^/#  /'
+            echo "${error//$'\n'/$'\n'#  }"  # Use parameter expansion instead of sed
         fi
         
         # Save the failure status for the exit code
@@ -58,7 +62,8 @@ run_test() {
 # Function to create a temporary directory for tests
 # Usage: create_test_dir
 create_test_dir() {
-    local tmp_dir=$(mktemp -d -t "context-test-XXXXXX")
+    local tmp_dir
+    tmp_dir=$(mktemp -d -t "context-test-XXXXXX")
     echo "$tmp_dir"
 }
 
@@ -105,7 +110,8 @@ create_test_file() {
     echo "It contains exactly $size_bytes bytes of data." >> "$file_path"
     
     # Calculate how many bytes we need to add to reach the desired size
-    local current_size=$(wc -c < "$file_path")
+    local current_size
+    current_size=$(wc -c < "$file_path")
     local remaining_bytes=$((size_bytes - current_size))
     
     if [ $remaining_bytes -gt 0 ]; then
@@ -114,8 +120,9 @@ create_test_file() {
     fi
     
     # Verify the file is the right size
-    local final_size=$(wc -c < "$file_path")
-    if [ $final_size -ne $size_bytes ]; then
+    local final_size
+    final_size=$(wc -c < "$file_path")
+    if [ "$final_size" -ne "$size_bytes" ]; then
         echo "# Warning: Created file size ($final_size) doesn't match requested size ($size_bytes)" >&2
     fi
 }

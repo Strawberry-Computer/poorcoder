@@ -124,7 +124,8 @@ fi
 
 # Test 8: Max size limit not exceeded
 small_output=$(cd "$test_dir" && "$PROJECT_ROOT/context" small.txt --max-size=2KB 2>&1)
-if [ $? -eq 0 ]; then
+# Check command status directly instead of using $?
+if "$PROJECT_ROOT/context" small.txt --max-size=2KB >/dev/null 2>&1; then
     echo "ok $((test_number+=1)) - max size limit not exceeded"
 else
     echo "not ok $((test_number+=1)) - max size limit not exceeded"

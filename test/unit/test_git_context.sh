@@ -23,7 +23,7 @@ echo "# Using temporary directory: $test_dir"
 
 # Setup a minimal git repository
 mkdir -p "$test_dir/repo"
-cd "$test_dir/repo"
+cd "$test_dir/repo" || exit 1
 git init > /dev/null 2>&1
 git config --local user.email "test@example.com"
 git config --local user.name "Test User"
@@ -59,7 +59,7 @@ else
 fi
 
 # Test 2: No-prompt option
-no_prompt_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" --no-prompt 2>&1)
+no_prompt_output=$(cd "$test_dir/repo" || exit 1 && "$PROJECT_ROOT/git-context" --no-prompt 2>&1)
 if ! echo "$no_prompt_output" | grep -q "Commit Message Guidance"; then
     echo "ok $((test_number+=1)) - no-prompt option suppresses guidance"
 else
@@ -80,11 +80,11 @@ fi
 echo "# Section 2: Output Format Tests"
 
 # Make a change to test file for diff output
-cd "$test_dir/repo"
+cd "$test_dir/repo" || exit 1
 echo "Modified for diff" > test_file.txt
 
 # Test 4: Check for Git Status section
-output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" 2>&1)
+output=$(cd "$test_dir/repo" || exit 1 && "$PROJECT_ROOT/git-context" 2>&1)
 if echo "$output" | grep -q "## Git Status"; then
     echo "ok $((test_number+=1)) - output contains Git Status section"
 else
@@ -123,7 +123,7 @@ fi
 echo "# Section 3: Prompt Handling Tests"
 
 # Test 8: Default prompt
-prompt_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" 2>&1)
+prompt_output=$(cd "$test_dir/repo" || exit 1 && "$PROJECT_ROOT/git-context" 2>&1)
 if echo "$prompt_output" | grep -q "Default prompt content"; then
     echo "ok $((test_number+=1)) - default prompt is included"
 else
@@ -134,7 +134,7 @@ else
 fi
 
 # Test 9: Custom prompt file
-custom_output=$(cd "$test_dir/repo" && "$PROJECT_ROOT/git-context" --prompt=custom_prompt.txt 2>&1)
+custom_output=$(cd "$test_dir/repo" || exit 1 && "$PROJECT_ROOT/git-context" --prompt=custom_prompt.txt 2>&1)
 if echo "$custom_output" | grep -q "Custom prompt content"; then
     echo "ok $((test_number+=1)) - custom prompt file is used"
 else

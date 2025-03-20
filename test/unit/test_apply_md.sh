@@ -95,7 +95,7 @@ fi
 
 # Test 2: Invalid option
 invalid_output=$("$PROJECT_ROOT/apply-md" --invalid-option 2>&1)
-if [ $? -ne 0 ] && echo "$invalid_output" | grep -q "Unknown parameter"; then
+if ! "$PROJECT_ROOT/apply-md" --invalid-option >/dev/null 2>&1 && echo "$invalid_output" | grep -q "Unknown parameter"; then
     echo "ok $((test_number+=1)) - invalid option causes error"
 else
     echo "not ok $((test_number+=1)) - invalid option causes error"
@@ -105,7 +105,7 @@ else
 fi
 
 # Test 3: Combined arguments
-output=$(cd "$test_dir" && cat test_input.md | "$PROJECT_ROOT/apply-md" --dry-run --verbose 2>&1)
+output=$(cd "$test_dir" && "$PROJECT_ROOT/apply-md" --dry-run --verbose < test_input.md 2>&1)
 if echo "$output" | grep -q "DRY RUN" && echo "$output" | grep -q "Starting markdown code application"; then
     echo "ok $((test_number+=1)) - combined arguments work correctly"
 else
@@ -122,7 +122,7 @@ echo "Original content" > "$test_dir/file1.txt"
 echo "Original content" > "$test_dir/file2.txt"
 
 # Test 4: Basic file update
-if cd "$test_dir" && cat test_input.md | "$PROJECT_ROOT/apply-md" && grep -q "Updated content" test_file.txt; then
+if cd "$test_dir" && "$PROJECT_ROOT/apply-md" < test_input.md && grep -q "Updated content" test_file.txt; then
     echo "ok $((test_number+=1)) - basic file update"
 else
     echo "not ok $((test_number+=1)) - basic file update"
@@ -132,7 +132,7 @@ fi
 
 # Test 5: Dry run mode
 echo "Original content" > "$test_dir/test_file.txt"
-output=$(cd "$test_dir" && cat test_input.md | "$PROJECT_ROOT/apply-md" --dry-run 2>&1)
+output=$(cd "$test_dir" && "$PROJECT_ROOT/apply-md" --dry-run < test_input.md 2>&1)
 if grep -q "Original content" "$test_dir/test_file.txt" && echo "$output" | grep -q "Would update file"; then
     echo "ok $((test_number+=1)) - dry run mode"
 else
@@ -143,7 +143,7 @@ else
 fi
 
 # Test 6: Verbose mode
-output=$(cd "$test_dir" && cat test_input.md | "$PROJECT_ROOT/apply-md" --verbose 2>&1)
+output=$(cd "$test_dir" && "$PROJECT_ROOT/apply-md" --verbose < test_input.md 2>&1)
 if echo "$output" | grep -q "Starting markdown code application"; then
     echo "ok $((test_number+=1)) - verbose mode"
 else
@@ -156,7 +156,7 @@ fi
 echo "# Section 3: Create Missing Files Tests"
 
 # Test 7: Without create-missing flag
-output=$(cd "$test_dir" && cat missing_files.md | "$PROJECT_ROOT/apply-md" 2>&1)
+output=$(cd "$test_dir" && "$PROJECT_ROOT/apply-md" < missing_files.md 2>&1)
 if [ ! -f "$test_dir/new_file.txt" ] && echo "$output" | grep -q "Warning: File does not exist"; then
     echo "ok $((test_number+=1)) - without create-missing flag"
 else
@@ -167,7 +167,7 @@ else
 fi
 
 # Test 8: With create-missing flag
-output=$(cd "$test_dir" && cat missing_files.md | "$PROJECT_ROOT/apply-md" --create-missing 2>&1)
+output=$(cd "$test_dir" && "$PROJECT_ROOT/apply-md" --create-missing < missing_files.md 2>&1)
 if [ -f "$test_dir/new_file.txt" ] && [ -f "$test_dir/src/new_folder/script.js" ]; then
     echo "ok $((test_number+=1)) - with create-missing flag"
 else
@@ -180,7 +180,7 @@ fi
 echo "# Section 4: Multiple Blocks Tests"
 
 # Test 9: Multiple file updates
-output=$(cd "$test_dir" && cat multiple_blocks.md | "$PROJECT_ROOT/apply-md" --create-missing 2>&1)
+output=$(cd "$test_dir" && "$PROJECT_ROOT/apply-md" --create-missing < multiple_blocks.md 2>&1)
 if grep -q "Updated content 1" "$test_dir/file1.txt" && grep -q "Updated content 2" "$test_dir/file2.txt"; then
     echo "ok $((test_number+=1)) - multiple file updates"
 else
