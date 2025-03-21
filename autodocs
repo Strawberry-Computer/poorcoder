@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# autodocs - Automatically update documentation for scripts
+# Updates individual doc files and README.md based on script content
+
+# Get script directory (works even when called from other directories)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Ensure all commands run from the script's directory
+cd "$SCRIPT_DIR"
+
+# List of scripts to process
+SCRIPTS=("apply-md" "autocommit" "context" "git-context")
+
+echo "Updating documentation files..."
+
+# Process each script
+for script in "${SCRIPTS[@]}"; do
+    if [ -f "$script" ]; then
+        echo "Generating docs for $script..."
+        
+        # Define the doc path
+        DOC_PATH="docs/${script}.md"
+        
+        # Create the command that will generate the updated documentation
+        CMD="./context \"$script\" | llm -m openrouter/anthropic/claude-3.5-haiku \"Update the markdown documentation for this script.\" | ./apply-md --create-missing"
+        
+        # Print and execute the command
+        echo "$ $CMD"
+        eval "$CMD"
+        
+        echo "Updated $DOC_PATH"
+        echo ""
+    else
+        echo "Warning: Script $script not found, skipping" >&2
+    fi
+done
+
+# Update README.md based on all doc files
+echo "Updating README.md..."
+
+# Command to generate updated README.md content
+README_CMD="./context \"docs/*.md\" | llm -m openrouter/anthropic/claude-3.5-haiku \"Generate a comprehensive README.md for this collection of scripts based on their documentation.\" | ./apply-md"
+
+# Print and execute the command
+echo "$ $README_CMD"
+eval "$README_CMD"
+
+echo "Documentation update complete!"
+exit 0
