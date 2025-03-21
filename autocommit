@@ -1,2 +1,7 @@
 #!/bin/bash
-git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
+
+# Get script directory (works even when called from other directories)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Use the full path to git-context
+git commit -am "$("$SCRIPT_DIR/git-context" | llm -m openrouter/anthropic/claude-3.5-haiku)" -e

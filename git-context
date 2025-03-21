@@ -1,25 +1,37 @@
 #!/bin/bash
 
-# simplified-git-context - Minimalist Git Context Generator for Commit Messages
+# git-context - Minimalist Git Context Generator for Commit Messages
 # Generates essential git-related context to help LLMs create meaningful commit messages
+
+# Get script directory (works even when called from other directories)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Default values
 RECENT_COMMITS=3
-PROMPT_FILE="prompts/commit_prompt.txt"
+PROMPT_FILE="$SCRIPT_DIR/prompts/commit_prompt.txt"
 INCLUDE_PROMPT=true
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --recent-commits=*) RECENT_COMMITS="${1#*=}"; shift ;;
-        --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
+        --prompt=*) 
+            # If the path is relative and doesn't start with /, treat it as relative to script dir
+            if [[ "${1#*=}" != /* ]]; then
+                PROMPT_FILE="$SCRIPT_DIR/${1#*=}"
+            else
+                PROMPT_FILE="${1#*=}"
+            fi
+            shift 
+            ;;
         --no-prompt) INCLUDE_PROMPT=false; shift ;;
         --help|-h)
-            echo "Usage: ./git-context [options]"
+            echo "Usage: git-context [options]"
             echo ""
             echo "Options:"
             echo "  --recent-commits=<num>    Show most recent N commits for context (default: 3)"
             echo "  --prompt=<file>           Use custom commit message prompt from file (default: prompts/commit_prompt.txt)"
+            echo "                            (Relative paths will be resolved from the script's directory)"
             echo "  --no-prompt               Don't include commit message prompt"
             echo "  --help, -h                Show this help message"
             exit 0

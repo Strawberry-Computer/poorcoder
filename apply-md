@@ -15,7 +15,7 @@ while [[ "$#" -gt 0 ]]; do
         --create-missing) CREATE_MISSING=true; shift ;;
         --verbose) VERBOSE=true; shift ;;
         --help|-h)
-            echo "Usage: ./apply-md [options]"
+            echo "Usage: apply-md [options]"
             echo ""
             echo "Options:"
             echo "  --dry-run         Preview changes without applying them"

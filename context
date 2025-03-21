@@ -3,6 +3,9 @@
 # context - Simplified Code Context Generator
 # Generates contextual information from a codebase to send to an LLM
 
+# Get script directory (works even when called from other directories)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 # Default values
 INCLUDE=()
 EXCLUDE=()
@@ -21,7 +24,7 @@ while [[ "$#" -gt 0 ]]; do
         --show-sizes) SHOW_FILE_SIZES=true; shift ;;
         --no-ls-files) SHOW_LS_FILES=false; shift ;;
         --help|-h)
-            echo "Usage: ./context [options] [include-pattern1 include-pattern2 ...]"
+            echo "Usage: context [options] [include-pattern1 include-pattern2 ...]"
             echo ""
             echo "Options:"
             echo "  --include=<pattern>      File pattern to include (e.g., \"src/*.js\")"
@@ -41,8 +44,8 @@ while [[ "$#" -gt 0 ]]; do
             echo "    \"!test/*\"            - Exclude all files in test directory"
             echo ""
             echo "Examples:"
-            echo "  ./context --include=\"src/*.js\" --exclude=\"*.test.js\""
-            echo "  ./context \"src/*.js\" \"*.md\" --max-size=1MB"
+            echo "  context --include=\"src/*.js\" --exclude=\"*.test.js\""
+            echo "  context \"src/*.js\" \"*.md\" --max-size=1MB"
             exit 0
             ;;
         --*) echo "Unknown parameter: $1"; exit 1 ;;
