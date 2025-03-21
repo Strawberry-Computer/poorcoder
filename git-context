@@ -15,15 +15,7 @@ INCLUDE_PROMPT=true
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --recent-commits=*) RECENT_COMMITS="${1#*=}"; shift ;;
-        --prompt=*) 
-            # If the path is relative and doesn't start with /, treat it as relative to script dir
-            if [[ "${1#*=}" != /* ]]; then
-                PROMPT_FILE="$SCRIPT_DIR/${1#*=}"
-            else
-                PROMPT_FILE="${1#*=}"
-            fi
-            shift 
-            ;;
+        --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
         --no-prompt) INCLUDE_PROMPT=false; shift ;;
         --help|-h)
             echo "Usage: git-context [options]"
@@ -31,7 +23,6 @@ while [[ "$#" -gt 0 ]]; do
             echo "Options:"
             echo "  --recent-commits=<num>    Show most recent N commits for context (default: 3)"
             echo "  --prompt=<file>           Use custom commit message prompt from file (default: prompts/commit_prompt.txt)"
-            echo "                            (Relative paths will be resolved from the script's directory)"
             echo "  --no-prompt               Don't include commit message prompt"
             echo "  --help, -h                Show this help message"
             exit 0
@@ -42,7 +33,7 @@ done
 
 # Ensure we're in a git repository
 if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    echo "Error: Not a git repository"
+    echo "Error: Not a git repository" >&2
     exit 1
 fi
 
@@ -120,8 +111,8 @@ if [ "$INCLUDE_PROMPT" = true ]; then
     if [ -f "$PROMPT_FILE" ]; then
         cat "$PROMPT_FILE"
     else
-        echo "Please write a clear and concise commit message that explains WHAT changes were made and WHY they were necessary."
-        echo "Focus on the purpose and impact of the changes, not just the technical details."
+        echo "Error: Prompt file not found: $PROMPT_FILE" >&2
+        exit 1
     fi
     echo ""
 fi
