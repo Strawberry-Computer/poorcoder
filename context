@@ -13,6 +13,8 @@ MAX_SIZE="500KB"
 INCLUDE_GIT=false
 SHOW_FILE_SIZES=false
 SHOW_LS_FILES=true
+PROMPT_FILE="$SCRIPT_DIR/prompts/context_prompt.txt"
+INCLUDE_PROMPT=true
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
@@ -23,6 +25,8 @@ while [[ "$#" -gt 0 ]]; do
         --git) INCLUDE_GIT=true; shift ;;
         --show-sizes) SHOW_FILE_SIZES=true; shift ;;
         --no-ls-files) SHOW_LS_FILES=false; shift ;;
+        --prompt=*) PROMPT_FILE="${1#*=}"; shift ;;
+        --no-prompt) INCLUDE_PROMPT=false; shift ;;
         --help|-h)
             echo "Usage: context [options] [include-pattern1 include-pattern2 ...]"
             echo ""
@@ -33,6 +37,8 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --git                    Include basic git information (recent commits, branch)"
             echo "  --show-sizes             Include file sizes in output"
             echo "  --no-ls-files            Don't include git ls-files output in repository map"
+            echo "  --prompt=<file>          Use custom context prompt from file (default: prompts/context_prompt.txt)"
+            echo "  --no-prompt              Don't include context prompt"
             echo "  --help, -h               Show this help message"
             echo ""
             echo "Pattern matching:"
@@ -174,5 +180,20 @@ for file in $ALL_FILES; do
     echo "\`\`\`"
     echo ""
 done
+
+# Include context prompt if requested
+if [ "$INCLUDE_PROMPT" = true ]; then
+    echo "## Context Prompt"
+    echo ""
+    
+    # Check if prompt file exists
+    if [ -f "$PROMPT_FILE" ]; then
+        cat "$PROMPT_FILE"
+    else
+        echo "Error: Prompt file not found: $PROMPT_FILE" >&2
+        exit 1
+    fi
+    echo ""
+fi
 
 exit 0
