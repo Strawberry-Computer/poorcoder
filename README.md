@@ -76,6 +76,9 @@ Here's a detailed overview of each script in poorcoder:
 Extracts relevant code context from your project to send to a web-based LLM.
 
 ```bash
+# Basic usage with specific files
+./context file1.js file2.js
+
 # Copy context directly to clipboard (macOS)
 ./context --include="src/*.js" --exclude="*.test.js" | pbcopy
 
@@ -93,6 +96,9 @@ Extracts relevant code context from your project to send to a web-based LLM.
 Extracts code blocks from markdown (typically LLM responses) and applies changes to your filesystem.
 
 ```bash
+# Basic usage with markdown input
+cat response.md | ./apply-md
+
 # Paste LLM response from clipboard (macOS)
 pbpaste | ./apply-md --dry-run --verbose
 
@@ -107,6 +113,9 @@ pbpaste | ./apply-md --create-missing
 Generates git-related context to help LLMs create meaningful commit messages.
 
 ```bash
+# Basic usage
+./git-context
+
 # Generate context, then use with API-based LLM via CLI tool
 git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
 ```

@@ -3,14 +3,17 @@
 # autodocs - Automatically update documentation for scripts
 # Updates individual doc files and README.md based on script content
 
+set -ex
+
 # Get script directory (works even when called from other directories)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+MODEL=openrouter/anthropic/claude-3.7-sonnet
 
 # Ensure all commands run from the script's directory
 cd "$SCRIPT_DIR"
 
 # List of scripts to process
-SCRIPTS=("apply-md" "autocommit" "context" "git-context")
+SCRIPTS=(apply-md" "context" "git-context")
 
 echo "Updating documentation files..."
 
@@ -21,13 +24,9 @@ for script in "${SCRIPTS[@]}"; do
         
         # Define the doc path
         DOC_PATH="docs/${script}.md"
-        
-        # Create the command that will generate the updated documentation
-        CMD="./context \"$script\" | llm -m openrouter/anthropic/claude-3.5-haiku \"Update the markdown documentation for this script.\" | ./apply-md --create-missing"
-        
-        # Print and execute the command
-        echo "$ $CMD"
-        eval "$CMD"
+
+        ./context "$DOC_PATH" "$script" --no-prompt --no-ls-files > tmp-context.md
+        cat tmp-context.md | llm -m "$MODEL" -s "Fix $DOC_PATH to match script. Output it verbatim and nothing else. DO NOT MODIFY ANYTHING ELSE. Do not wrap into \`\`\` code block." | tee "$DOC_PATH"
         
         echo "Updated $DOC_PATH"
         echo ""
@@ -39,12 +38,9 @@ done
 # Update README.md based on all doc files
 echo "Updating README.md..."
 
-# Command to generate updated README.md content
-README_CMD="./context \"docs/*.md\" | llm -m openrouter/anthropic/claude-3.5-haiku \"Generate a comprehensive README.md for this collection of scripts based on their documentation.\" | ./apply-md"
-
-# Print and execute the command
-echo "$ $README_CMD"
-eval "$README_CMD"
+./context README.md "docs/*.md" --no-ls-files > tmp-context.md
+cat tmp-context.md | llm -m "$MODEL" "Fix README.md to match individual scripts documentation. Output whole file verbatim and nothing else. DO NOT MODIFY ANYTHING ELSE. Do not wrap into \`\`\` code block." | tee README.md
 
 echo "Documentation update complete!"
+rm tmp-context.md
 exit 0
