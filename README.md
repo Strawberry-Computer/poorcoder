@@ -4,11 +4,12 @@ A collection of lightweight Bash scripts to enhance your coding workflow with AI
 
 ## Overview
 
-This repository contains three main tools:
+This repository contains four main tools:
 
 1. **`context`** - Extracts code context from your project to send to an LLM
 2. **`apply-md`** - Applies code changes from LLM's markdown response
 3. **`git-context`** - Generates git context for AI-assisted commit messages
+4. **`autocommit`** - Automatically creates AI-generated commit messages using git-context
 
 ## Workflow
 
@@ -37,7 +38,7 @@ Simply clone this repository and make the scripts executable:
 ```bash
 git clone https://github.com/vgrichina/poorcoder.git
 cd poorcoder
-chmod +x context apply-md git-context
+chmod +x context apply-md git-context autocommit
 ```
 
 You can either use the scripts directly from this folder or add them to your PATH for global access.
@@ -50,10 +51,10 @@ For heavy usage, copy the scripts and prompts directory directly into your proje
 # Clone the repository
 git clone https://github.com/vgrichina/poorcoder.git
 # Copy essential files to your project
-cp poorcoder/{context,apply-md,git-context} /path/to/your/project/
+cp poorcoder/{context,apply-md,git-context,autocommit} /path/to/your/project/
 cp -r poorcoder/prompts /path/to/your/project/
 # Make scripts executable
-chmod +x /path/to/your/project/{context,apply-md,git-context}
+chmod +x /path/to/your/project/{context,apply-md,git-context,autocommit}
 ```
 
 This approach lets you customize both the scripts and prompts for your specific project workflow. You can also create custom aliases or wrapper scripts, for example:
@@ -122,6 +123,25 @@ git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)"
 
 [See full documentation for git-context](./docs/git-context.md)
 
+### 4. `autocommit` - Automated AI Commit Message Generator
+
+Automatically creates commits with AI-generated commit messages using git-context.
+
+```bash
+# Basic usage - commits all changes with an AI-generated message
+./autocommit
+
+# The script opens an editor to allow you to review/edit the message before finalizing
+```
+
+The autocommit script is a simple wrapper that:
+1. Uses git-context to gather information about your changes
+2. Passes that context to an LLM via the llm CLI tool
+3. Uses the generated message for a git commit
+4. Opens your editor to let you review/edit the message before finalizing
+
+This script requires the `llm` CLI tool to be installed and configured with an appropriate LLM model.
+
 ## Component Interaction
 
 The following diagram shows how the different components of poorcoder interact with each other and with external systems:
@@ -132,6 +152,7 @@ flowchart TB
         context["context\n(Extract Code Context)"]
         applymd["apply-md\n(Apply Code Changes)"]
         gitcontext["git-context\n(Generate Git Info)"]
+        autocommit["autocommit\n(AI Commit Messages)"]
         clipboard[("Clipboard\n(pbcopy/pbpaste)")]
         files[("Project Files")]
         git[("Git Repository")]
@@ -158,6 +179,11 @@ flowchart TB
     gitcontext -->|"Generate context"| llmcli
     llmcli -->|"Generate message"| git
     
+    %% Autocommit workflow
+    autocommit -->|"Uses"| gitcontext
+    autocommit -->|"Uses"| llmcli
+    autocommit -->|"Commits to"| git
+    
     %% Direct CLI workflow
     context -.->|"Direct pipe"| llmcli
     llmcli -.->|"Direct pipe"| applymd
@@ -168,7 +194,7 @@ flowchart TB
     classDef external fill:#6a89cc,stroke:#333,stroke-width:1px,color:white
     classDef cli fill:#78e08f,stroke:#333,stroke-width:1px
     
-    class context,applymd,gitcontext tool
+    class context,applymd,gitcontext,autocommit tool
     class files,clipboard,git storage
     class llm external
     class llmcli cli
@@ -202,6 +228,9 @@ For quick operations or automation using LLM CLI tools:
 # Generate commit message using LLM CLI
 git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
 
+# Or use the autocommit script for a simpler workflow
+./autocommit
+
 # Fix a small issue directly in terminal
 ./context --include="src/buggy-file.js" | llm "Fix the null reference bug" | ./apply-md
 ```
@@ -222,9 +251,9 @@ git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)"
    pbpaste | ./apply-md            # Apply changes
    ```
 
-4. Generate a commit message:
+4. Generate a commit message using autocommit:
    ```bash
-   git commit -am "$(./git-context | llm -m openrouter/anthropic/claude-3.5-haiku)" -e
+   ./autocommit  # Automatically generates commit message and opens editor
    ```
 
 ## Integration with Other Tools
