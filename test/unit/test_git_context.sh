@@ -39,8 +39,7 @@ git add test_file.txt
 
 # Create test prompt files
 mkdir -p "$test_dir/repo/prompts"
-echo "Default prompt content" > "$test_dir/repo/prompts/commit_prompt.txt"
-echo "Conventional commit content" > "$test_dir/repo/prompts/conventional_commit.txt"
+# Don't create default prompts, they'll be used from script directory
 echo "Custom prompt content" > "$test_dir/repo/custom_prompt.txt"
 
 # Ensure git-context script is executable
@@ -124,7 +123,7 @@ echo "# Section 3: Prompt Handling Tests"
 
 # Test 8: Default prompt
 prompt_output=$(cd "$test_dir/repo" || exit 1 && "$PROJECT_ROOT/git-context" 2>&1)
-if echo "$prompt_output" | grep -q "Default prompt content"; then
+if echo "$prompt_output" | grep -q "Based on the changes above"; then
     echo "ok $((test_number+=1)) - default prompt is included"
 else
     echo "not ok $((test_number+=1)) - default prompt is included"
