@@ -46,7 +46,7 @@ extract_blocks() {
     local temp_file=""
     
     echo "$MARKDOWN" | while IFS= read -r line; do
-        if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-]+)[[:space:]]+(.+) ]]; then
+        if [[ "$line" =~ ^[[:space:]]*\`\`\`([a-zA-Z0-9\+\-\/]+)[[:space:]]+(.+) ]]; then
             current_file="${BASH_REMATCH[2]}"
             in_block=true
             temp_file="$TEMP_DIR/$current_file"
